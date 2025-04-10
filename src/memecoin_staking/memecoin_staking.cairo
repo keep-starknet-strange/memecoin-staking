@@ -20,9 +20,6 @@ pub mod MemeCoinStaking {
         self.owner.write(owner);
         self.current_version.write(0);
         self.stake_index.write(1);
-        self.points_info.push(PointsInfo {
-            total_points: 0,
-            pending_points: 0,
-        });
+        self.points_info.push(PointsInfo { total_points: 0, pending_points: 0 });
     }
 }
