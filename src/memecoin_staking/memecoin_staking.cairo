@@ -3,7 +3,7 @@ pub mod MemeCoinStaking {
     use memecoin_staking::memecoin_staking::interface::{PointsInfo, StakeDuration, StakeInfo};
     use memecoin_staking::types::{Index, Version};
     use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePointerWriteAccess, Vec};
+    use starknet::storage::{Map, MutableVecTrait, StoragePointerWriteAccess, Vec};
 
     #[storage]
     struct Storage {
@@ -20,5 +20,9 @@ pub mod MemeCoinStaking {
         self.owner.write(owner);
         self.current_version.write(0);
         self.stake_index.write(1);
+        self.points_info.push(PointsInfo {
+            total_points: 0,
+            pending_points: 0,
+        });
     }
 }
