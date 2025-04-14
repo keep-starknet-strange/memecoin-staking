@@ -1,0 +1,24 @@
+[package]
+name = "memecoin_staking"
+version = "0.1.0"
+edition = "2024_07"
+
+# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
+
+[dependencies]
+starknet = "2.9.2"
+starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "cb180ac4d561cb675466b26e8c619d946a5d23c6" }
+
+[dev-dependencies]
+snforge_std = "0.34.0"
+assert_macros = "2.11.0"
+
+[[target.starknet-contract]]
+sierra = true
+
+[scripts]
+test = "snforge test"
+
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]
+
