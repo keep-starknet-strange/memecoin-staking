@@ -1,6 +1,8 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
-    use memecoin_staking::memecoin_staking::interface::{PointsInfo, StakeDuration, StakeInfo};
+    use memecoin_staking::memecoin_staking::interface::{
+        IMemeCoinStaking, PointsInfo, StakeDuration, StakeInfo,
+    };
     use memecoin_staking::types::{Index, Version};
     use starknet::storage::{Map, StoragePointerReadAccess, StoragePointerWriteAccess, Vec};
     use starknet::{ContractAddress, get_caller_address};
@@ -13,6 +15,14 @@ pub mod MemeCoinStaking {
         points_info: Vec<PointsInfo>,
         current_version: Version,
         stake_index: Index,
+    }
+
+    #[abi(embed_v0)]
+    impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
+        fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
+            assert!(self.caller_is_owner(), "Can only be called by the owner");
+            self.rewards_contract.write(rewards_contract);
+        }
     }
 
     #[generate_trait]
