@@ -1,13 +1,19 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
-    use memecoin_staking::memecoin_staking::interface::IMemeCoinStaking;
-    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use memecoin_staking::memecoin_staking::interface::{IMemeCoinStaking, PointsInfo};
+    use memecoin_staking::types::{Index, Version};
+    use starknet::storage::{
+        MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
+    };
     use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
     struct Storage {
         owner: ContractAddress,
         rewards_contract: ContractAddress,
+        current_version: Version,
+        stake_index: Index,
+        points_info: Vec<PointsInfo>,
     }
 
     #[abi(embed_v0)]
@@ -25,5 +31,13 @@ pub mod MemeCoinStaking {
             let caller = get_caller_address();
             owner == caller
         }
+    }
+
+    #[constructor]
+    pub fn constructor(ref self: ContractState, owner: ContractAddress) {
+        self.owner.write(owner);
+        self.current_version.write(0);
+        self.stake_index.write(1);
+        self.points_info.push(PointsInfo { total_points: 0, pending_points: 0 });
     }
 }
