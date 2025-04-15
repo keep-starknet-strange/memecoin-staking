@@ -1,5 +1,5 @@
-use starknet::ContractAddress;
 use memecoin_staking::types::{Amount, Index, Version};
+use starknet::ContractAddress;
 use starkware_utils::types::time::time::Timestamp;
 
 #[starknet::interface]
