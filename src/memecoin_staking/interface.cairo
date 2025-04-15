@@ -4,16 +4,17 @@ use starkware_utils::types::time::time::Timestamp;
 
 #[starknet::interface]
 pub trait IMemeCoinStaking<TContractState> {
-    /// Only callable by the contract owner.
     /// Sets the rewards contract address.
+    /// Callable only by the contract owner.
     fn set_rewards_contract(ref self: TContractState, rewards_contract: ContractAddress);
 
     /// Stakes the specified amount of meme coin for the specified duration.
+    /// Returns the stake id.
     fn stake(ref self: TContractState, amount: Amount, duration: StakeDuration) -> Index;
 
+    /// Claims rewards for the caller and unstakes from the contract.
     /// If id is 0, unstakes all stakes.
     /// If id is not 0, unstakes the stake with the specified id.
-    /// Either way, this also triggers a claim.
     fn unstake(ref self: TContractState, id: Index);
 
     /// Returns the caller's stake info.
@@ -25,12 +26,12 @@ pub trait IMemeCoinStaking<TContractState> {
     /// Claims rewards for the caller.
     fn claim(ref self: TContractState);
 
-    /// Only callable by the contract owner.
     /// Returns the total and pending points for a specific version.
+    /// Callable only by the contract owner.
     fn query_points(self: @TContractState, version: Version) -> PointsInfo;
 
-    /// Can only be called by the rewards contract.
     /// Bumps current version and returns the total points for the last version.
+    /// Callable only by the rewards contract.
     fn new_version(ref self: TContractState) -> Amount;
 }
 
