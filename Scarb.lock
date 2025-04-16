@@ -5,6 +5,7 @@ version = 1
 name = "memecoin_staking"
 version = "0.1.0"
 dependencies = [
+ "snforge_scarb_plugin",
  "snforge_std",
  "starkware_utils",
 ]
