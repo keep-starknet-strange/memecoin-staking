@@ -6,20 +6,22 @@ use snforge_std::{
 };
 use starknet::{ContractAddress, Store};
 
-fn deploy_memecoin_staking_contract(owner: ContractAddress) -> ContractAddress {
+fn deploy_memecoin_staking_contract(
+    owner: ContractAddress,
+) -> (ContractAddress, IMemeCoinStakingDispatcher) {
     let mut calldata = ArrayTrait::new();
     owner.serialize(ref calldata);
 
     let memecoin_staking_contract = declare("MemeCoinStaking").unwrap().contract_class();
     let (contract_address, _) = memecoin_staking_contract.deploy(@calldata).unwrap();
 
-    contract_address
+    (contract_address, IMemeCoinStakingDispatcher { contract_address: contract_address })
 }
 
 #[test]
 fn test_constructor() {
     let owner: ContractAddress = 'owner'.try_into().unwrap();
-    let contract_address = deploy_memecoin_staking_contract(owner);
+    let (contract_address, _) = deploy_memecoin_staking_contract(owner);
 
     let loaded_owner: ContractAddress = (*load(
         target: contract_address,
@@ -36,9 +38,7 @@ fn test_constructor() {
 #[test]
 fn test_set_rewards_contract() {
     let owner: ContractAddress = 'owner'.try_into().unwrap();
-    let contract_address = deploy_memecoin_staking_contract(owner);
-
-    let dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner);
 
     let rewards_contract: ContractAddress = 'rewards_contract'.try_into().unwrap();
 
@@ -63,9 +63,7 @@ fn test_set_rewards_contract() {
 #[should_panic(expected: "Can only be called by the owner")]
 fn test_set_rewards_contract_wrong_caller() {
     let owner: ContractAddress = 'owner'.try_into().unwrap();
-    let contract_address = deploy_memecoin_staking_contract(owner);
-
-    let dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
+    let (_, dispatcher) = deploy_memecoin_staking_contract(owner);
 
     let rewards_contract: ContractAddress = 'rewards_contract'.try_into().unwrap();
     dispatcher.set_rewards_contract(rewards_contract);
