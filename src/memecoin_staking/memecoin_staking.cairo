@@ -6,7 +6,9 @@ pub mod MemeCoinStaking {
 
     #[storage]
     struct Storage {
+        /// The owner of the contract.
         owner: ContractAddress,
+        /// The address of the rewards contract associated with the staking contract.
         rewards_contract: ContractAddress,
     }
 
