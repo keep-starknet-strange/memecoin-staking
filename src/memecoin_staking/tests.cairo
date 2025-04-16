@@ -1,6 +1,10 @@
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load, cheat_caller_address, CheatSpan};
+use memecoin_staking::memecoin_staking::interface::{
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait,
+};
+use snforge_std::{
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
+};
 use starknet::{ContractAddress, Store};
-use memecoin_staking::memecoin_staking::interface::{IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait};
 
 fn deploy_memecoin_staking_contract(owner: ContractAddress) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
@@ -34,16 +38,12 @@ fn test_set_rewards_contract() {
     let owner: ContractAddress = 'owner'.try_into().unwrap();
     let contract_address = deploy_memecoin_staking_contract(owner);
 
-    let dispatcher = IMemeCoinStakingDispatcher {
-        contract_address: contract_address,
-    };
+    let dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
 
     let rewards_contract: ContractAddress = 'rewards_contract'.try_into().unwrap();
 
     cheat_caller_address(
-        contract_address: contract_address,
-        caller_address: owner,
-        span: CheatSpan::TargetCalls(1),
+        contract_address: contract_address, caller_address: owner, span: CheatSpan::TargetCalls(1),
     );
     dispatcher.set_rewards_contract(rewards_contract);
 
@@ -65,9 +65,7 @@ fn test_set_rewards_contract_wrong_caller() {
     let owner: ContractAddress = 'owner'.try_into().unwrap();
     let contract_address = deploy_memecoin_staking_contract(owner);
 
-    let dispatcher = IMemeCoinStakingDispatcher {
-        contract_address: contract_address,
-    };
+    let dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
 
     let rewards_contract: ContractAddress = 'rewards_contract'.try_into().unwrap();
     dispatcher.set_rewards_contract(rewards_contract);
