@@ -19,6 +19,12 @@ pub mod MemeCoinStaking {
         stake_index: Index,
     }
 
+    #[constructor]
+    pub fn constructor(ref self: ContractState) {
+        self.current_version.write(0);
+        self.stake_index.write(1);
+    }
+
     #[abi(embed_v0)]
     impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
         fn stake(ref self: ContractState, amount: Amount, duration: StakeDuration) -> Index {
@@ -53,10 +59,19 @@ pub mod MemeCoinStaking {
         }
 
         fn stake_update_points_info(ref self: ContractState, version: Version, amount: Amount) {
-            let mut points_info = self.points_info.at(version.into()).read();
-            points_info.total_points += amount;
-            points_info.pending_points += amount;
-            self.points_info.at(version.into()).write(points_info);
+            let mut points_info = self.points_info.get(version.into());
+            if points_info.is_none() {
+                assert!(self.points_info.len() == version.into(), "Version number is too high");
+                self.points_info.push(PointsInfo {
+                    total_points: amount,
+                    pending_points: amount,
+                });
+            } else {
+                let mut points_info = points_info.unwrap().read();
+                points_info.total_points += amount;
+                points_info.pending_points += amount;
+                self.points_info.at(version.into()).write(points_info);
+            }
         }
     }
 }

@@ -38,7 +38,7 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
     }
 }
 
-#[derive(starknet::Store)]
+#[derive(starknet::Store, Drop)]
 pub struct PointsInfo {
     pub total_points: Amount,
     pub pending_points: Amount,
