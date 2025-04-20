@@ -6,7 +6,7 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
 };
-use starknet::{ContractAddress, Store, get_caller_address};
+use starknet::{ContractAddress, Store};
 
 fn deploy_memecoin_staking_contract(
     token_address: ContractAddress,
@@ -106,6 +106,21 @@ fn test_stake_without_approve() {
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
+    cheat_caller_address_once(contract_address, staker_address);
+    dispatcher.stake(amount, duration);
+}
+
+#[test]
+#[should_panic(expected: 'ERC20: insufficient balance')]
+fn test_stake_insufficient_balance() {
+    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    let (token_address, token_dispatcher) = deploy_mock_erc20_contract(500, staker_address);
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(token_address);
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    cheat_caller_address_once(token_address, staker_address);
+    token_dispatcher.approve(contract_address, amount.into());
     cheat_caller_address_once(contract_address, staker_address);
     dispatcher.stake(amount, duration);
 }
