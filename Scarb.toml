@@ -15,6 +15,10 @@ snforge_scarb_plugin = "0.34.0"
 assert_macros = "2.11.0"
 openzeppelin = "1.0.0"
 
+[[test]]
+name = "contracts_unittest"
+build-external-contracts = ["starkware_utils::erc20_mocks::DualCaseERC20Mock"]
+
 [[target.starknet-contract]]
 sierra = true
 
