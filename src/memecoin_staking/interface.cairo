@@ -59,8 +59,6 @@ pub struct StakeInfo {
     pub version: Version,
     /// The amount staked.
     pub amount: Amount,
-    /// The stake duration.
-    pub stake_duration: StakeDuration,
     /// The vesting time (the time when rewards can be claimed for this stake).
     pub vesting_time: Timestamp,
 }
