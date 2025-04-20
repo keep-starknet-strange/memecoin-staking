@@ -45,16 +45,6 @@ fn cheat_caller_address_once(contract_address: ContractAddress, caller_address: 
     );
 }
 
-fn cheat_caller_address_many(
-    contract_address: ContractAddress, caller_address: ContractAddress, times: u8,
-) {
-    cheat_caller_address(
-        contract_address: contract_address,
-        caller_address: caller_address,
-        span: CheatSpan::TargetCalls(times.into()),
-    );
-}
-
 #[test]
 fn test_stake() {
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
