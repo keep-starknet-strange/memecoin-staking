@@ -13,6 +13,7 @@ starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-
 snforge_std = "0.34.0"
 snforge_scarb_plugin = "0.34.0"
 assert_macros = "2.11.0"
+openzeppelin = "1.0.0"
 
 [[target.starknet-contract]]
 sierra = true
