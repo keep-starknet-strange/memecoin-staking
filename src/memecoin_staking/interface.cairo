@@ -8,6 +8,7 @@ pub trait IMemeCoinStaking<TContractState> {
     fn stake(ref self: TContractState, amount: Amount, duration: StakeDuration) -> Index;
 }
 
+/// Different stake durations.
 #[derive(starknet::Store, Drop, Hash, Serde, Copy)]
 pub enum StakeDuration {
     #[default]
@@ -19,6 +20,7 @@ pub enum StakeDuration {
 
 #[generate_trait]
 pub(crate) impl StakeDurationImpl of StakeDurationTrait {
+    /// Converts the stake duration to a time delta.
     fn to_time_delta(self: @StakeDuration) -> TimeDelta {
         match self {
             StakeDuration::OneMonth => Time::days(30),
@@ -28,6 +30,7 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
         }
     }
 
+    /// Gets the points multiplier for the stake duration.
     fn get_multiplier(self: @StakeDuration) -> Multiplier {
         match self {
             StakeDuration::OneMonth => 10,
@@ -38,17 +41,26 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
     }
 }
 
+/// Points info for each version.
 #[derive(starknet::Store, Drop)]
 pub struct PointsInfo {
+    /// The total points across all stakes for this version.
     pub total_points: Amount,
+    /// The pending points (unvested) across all stakes for this version.
     pub pending_points: Amount,
 }
 
+/// Stake info for each stake.
 #[derive(starknet::Store, Drop)]
 pub struct StakeInfo {
+    /// The stake id (unique to the contract, used for unstaking).
     pub id: Index,
+    /// The version number.
     pub version: Version,
+    /// The amount staked.
     pub amount: Amount,
+    /// The stake duration.
     pub stake_duration: StakeDuration,
+    /// The vesting time (the time when rewards can be claimed for this stake).
     pub vesting_time: Timestamp,
 }
