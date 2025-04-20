@@ -14,10 +14,15 @@ pub mod MemeCoinStaking {
 
     #[storage]
     struct Storage {
+        /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
+        /// Stores the points info (total and pending) for each version.
         points_info: Vec<PointsInfo>,
+        /// The current version number.
         current_version: Version,
+        /// The index of the next stake.
         stake_index: Index,
+        /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
     }
 
