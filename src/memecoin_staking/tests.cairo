@@ -1,5 +1,6 @@
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
+    StakeInfo,
 };
 use memecoin_staking::types::{Amount, Index, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -38,11 +39,7 @@ fn deploy_mock_erc20_contract(
 }
 
 fn cheat_caller_address_once(contract_address: ContractAddress, caller_address: ContractAddress) {
-    cheat_caller_address(
-        contract_address: contract_address,
-        caller_address: caller_address,
-        span: CheatSpan::TargetCalls(1),
-    );
+    cheat_caller_address_many(contract_address, caller_address, 1);
 }
 
 fn cheat_caller_address_many(
@@ -125,10 +122,40 @@ fn test_stake_insufficient_balance() {
     dispatcher.stake(amount, duration);
 }
 
+fn verify_stake_info(
+    stake_info: @StakeInfo, id: Index, version: Version, amount: Amount, duration: StakeDuration,
+) {
+    let lower_vesting_time_bound = Time::now().add(duration.to_time_delta() - Time::seconds(1));
+    let upper_vesting_time_bound = Time::now().add(duration.to_time_delta());
+    assert!(stake_info.id == @id);
+    assert!(stake_info.version == @version);
+    assert!(stake_info.amount == @amount);
+    assert!(stake_info.vesting_time >= @lower_vesting_time_bound);
+    assert!(stake_info.vesting_time <= @upper_vesting_time_bound);
+}
+
+fn stake_and_verify_stake_info(
+    contract_address: ContractAddress,
+    staker_address: ContractAddress,
+    token_address: ContractAddress,
+    amount: Amount,
+    duration: StakeDuration,
+    stake_count: u8,
+) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
+    cheat_caller_address_once(token_address, staker_address);
+    token_dispatcher.approve(contract_address, amount.into());
+    cheat_caller_address_many(contract_address, staker_address, 2);
+    let stake_id = staking_dispatcher.stake(amount, duration);
+    let stake_info = staking_dispatcher.get_stake_info();
+    verify_stake_info(stake_info.at(stake_count.into()), stake_id, 0, amount, duration);
+}
+
 #[test]
 fn test_get_stake_info() {
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let (token_address, token_dispatcher) = deploy_mock_erc20_contract(2000, staker_address);
+    let (token_address, _) = deploy_mock_erc20_contract(2000, staker_address);
     let (contract_address, dispatcher) = deploy_memecoin_staking_contract(token_address);
 
     cheat_caller_address_once(token_address, staker_address);
@@ -137,36 +164,25 @@ fn test_get_stake_info() {
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
-    cheat_caller_address_once(token_address, staker_address);
-    token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_many(contract_address, staker_address, 2);
-    dispatcher.stake(amount, duration);
-    let stake_info = dispatcher.get_stake_info();
-    let lower_vesting_time_bound = Time::now().add(duration.to_time_delta() - Time::seconds(1));
-    let upper_vesting_time_bound = Time::now().add(duration.to_time_delta());
-    println!("length: {}", stake_info.len());
-    assert!(stake_info.len() == 1);
-    assert!(stake_info.at(0).id == @1);
-    assert!(stake_info.at(0).version == @0);
-    assert!(stake_info.at(0).amount == @amount);
-    assert!(stake_info.at(0).vesting_time >= @lower_vesting_time_bound);
-    assert!(stake_info.at(0).vesting_time <= @upper_vesting_time_bound);
+    stake_and_verify_stake_info(
+        contract_address, staker_address, token_address, amount, duration, 0,
+    );
 
     let amount: Amount = 500;
     let duration = StakeDuration::ThreeMonths;
-    cheat_caller_address_once(token_address, staker_address);
-    token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_many(contract_address, staker_address, 2);
-    dispatcher.stake(amount, duration);
-    let stake_info = dispatcher.get_stake_info();
-    let lower_vesting_time_bound = Time::now().add(duration.to_time_delta() - Time::seconds(1));
-    let upper_vesting_time_bound = Time::now().add(duration.to_time_delta());
-    println!("length: {}", stake_info.len());
-    assert!(stake_info.len() == 2);
-    assert!(stake_info.at(0).id == @1);
-    assert!(stake_info.at(1).id == @2);
-    assert!(stake_info.at(1).version == @0);
-    assert!(stake_info.at(1).amount == @amount);
-    assert!(stake_info.at(1).vesting_time >= @lower_vesting_time_bound);
-    assert!(stake_info.at(1).vesting_time <= @upper_vesting_time_bound);
+    stake_and_verify_stake_info(
+        contract_address, staker_address, token_address, amount, duration, 1,
+    );
+
+    let amount: Amount = 250;
+    let duration = StakeDuration::SixMonths;
+    stake_and_verify_stake_info(
+        contract_address, staker_address, token_address, amount, duration, 2,
+    );
+
+    let amount: Amount = 125;
+    let duration = StakeDuration::TwelveMonths;
+    stake_and_verify_stake_info(
+        contract_address, staker_address, token_address, amount, duration, 3,
+    );
 }
