@@ -1,5 +1,5 @@
 use memecoin_staking::memecoin_staking::interface::{
-    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
 };
 use memecoin_staking::types::{Amount, Index, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -7,7 +7,7 @@ use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
 };
 use starknet::{ContractAddress, Store};
-
+use starkware_utils::types::time::time::Time;
 fn deploy_memecoin_staking_contract(
     token_address: ContractAddress,
 ) -> (ContractAddress, IMemeCoinStakingDispatcher) {
@@ -42,6 +42,16 @@ fn cheat_caller_address_once(contract_address: ContractAddress, caller_address: 
         contract_address: contract_address,
         caller_address: caller_address,
         span: CheatSpan::TargetCalls(1),
+    );
+}
+
+fn cheat_caller_address_many(
+    contract_address: ContractAddress, caller_address: ContractAddress, times: u8,
+) {
+    cheat_caller_address(
+        contract_address: contract_address,
+        caller_address: caller_address,
+        span: CheatSpan::TargetCalls(times.into()),
     );
 }
 
@@ -113,4 +123,50 @@ fn test_stake_insufficient_balance() {
     token_dispatcher.approve(contract_address, amount.into());
     cheat_caller_address_once(contract_address, staker_address);
     dispatcher.stake(amount, duration);
+}
+
+#[test]
+fn test_get_stake_info() {
+    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    let (token_address, token_dispatcher) = deploy_mock_erc20_contract(2000, staker_address);
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(token_address);
+
+    cheat_caller_address_once(token_address, staker_address);
+    let stake_info = dispatcher.get_stake_info();
+    assert!(stake_info.len() == 0);
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    cheat_caller_address_once(token_address, staker_address);
+    token_dispatcher.approve(contract_address, amount.into());
+    cheat_caller_address_many(contract_address, staker_address, 2);
+    dispatcher.stake(amount, duration);
+    let stake_info = dispatcher.get_stake_info();
+    let lower_vesting_time_bound = Time::now().add(duration.to_time_delta() - Time::seconds(1));
+    let upper_vesting_time_bound = Time::now().add(duration.to_time_delta());
+    println!("length: {}", stake_info.len());
+    assert!(stake_info.len() == 1);
+    assert!(stake_info.at(0).id == @1);
+    assert!(stake_info.at(0).version == @0);
+    assert!(stake_info.at(0).amount == @amount);
+    assert!(stake_info.at(0).vesting_time >= @lower_vesting_time_bound);
+    assert!(stake_info.at(0).vesting_time <= @upper_vesting_time_bound);
+
+    let amount: Amount = 500;
+    let duration = StakeDuration::ThreeMonths;
+    cheat_caller_address_once(token_address, staker_address);
+    token_dispatcher.approve(contract_address, amount.into());
+    cheat_caller_address_many(contract_address, staker_address, 2);
+    dispatcher.stake(amount, duration);
+    let stake_info = dispatcher.get_stake_info();
+    let lower_vesting_time_bound = Time::now().add(duration.to_time_delta() - Time::seconds(1));
+    let upper_vesting_time_bound = Time::now().add(duration.to_time_delta());
+    println!("length: {}", stake_info.len());
+    assert!(stake_info.len() == 2);
+    assert!(stake_info.at(0).id == @1);
+    assert!(stake_info.at(1).id == @2);
+    assert!(stake_info.at(1).version == @0);
+    assert!(stake_info.at(1).amount == @amount);
+    assert!(stake_info.at(1).vesting_time >= @lower_vesting_time_bound);
+    assert!(stake_info.at(1).vesting_time <= @upper_vesting_time_bound);
 }
