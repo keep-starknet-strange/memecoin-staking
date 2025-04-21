@@ -61,29 +61,22 @@ pub(crate) impl StakeDurationIteratorImpl of Iterator<StakeDurationIter> {
     type Item = StakeDuration;
 
     fn next(ref self: StakeDurationIter) -> Option<StakeDuration> {
-        match self.stake_duration {
-            Some(duration) => {
-                match duration {
-                    StakeDuration::OneMonth => {
-                        self.stake_duration = Some(StakeDuration::ThreeMonths);
-                        Some(StakeDuration::OneMonth)
-                    },
-                    StakeDuration::ThreeMonths => {
-                        self.stake_duration = Some(StakeDuration::SixMonths);
-                        Some(StakeDuration::ThreeMonths)
-                    },
-                    StakeDuration::SixMonths => {
-                        self.stake_duration = Some(StakeDuration::TwelveMonths);
-                        Some(StakeDuration::SixMonths)
-                    },
-                    StakeDuration::TwelveMonths => {
-                        self.stake_duration = None;
-                        Some(StakeDuration::TwelveMonths)
-                    },
-                }
-            },
-            None => None,
+        let prev = self.stake_duration;
+        if let Some(duration) = self.stake_duration {
+            match duration {
+                StakeDuration::OneMonth => {
+                    self.stake_duration = Some(StakeDuration::ThreeMonths);
+                },
+                StakeDuration::ThreeMonths => {
+                    self.stake_duration = Some(StakeDuration::SixMonths);
+                },
+                StakeDuration::SixMonths => {
+                    self.stake_duration = Some(StakeDuration::TwelveMonths);
+                },
+                StakeDuration::TwelveMonths => { self.stake_duration = None; },
+            }
         }
+        prev
     }
 }
 
