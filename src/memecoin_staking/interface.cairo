@@ -19,6 +19,9 @@ pub trait IMemeCoinStaking<TContractState> {
 
     /// Get info for all stakes for the caller.
     fn get_stake_info(self: @TContractState) -> Span<StakeInfo>;
+
+    /// Bumps version number, returns total points for the previous version.
+    fn new_version(ref self: TContractState) -> Amount;
 }
 
 /// Different stake durations.
