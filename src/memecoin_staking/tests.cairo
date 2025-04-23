@@ -192,3 +192,41 @@ fn test_stake_insufficient_balance() {
     staking_dispatcher.stake(:amount, :duration);
 }
 
+#[test]
+fn test_new_version_no_stakes() {
+    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
+    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    let (token_address, token_dispatcher) = deploy_mock_erc20_contract(2000, staker_address);
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+
+    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
+    cheat_caller_address_once(contract_address, owner);
+    dispatcher.set_rewards_contract(rewards_contract);
+
+    cheat_caller_address_once(contract_address, rewards_contract);
+    dispatcher.new_version();
+}
+
+#[test]
+fn test_new_version() {
+    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
+    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    let (token_address, token_dispatcher) = deploy_mock_erc20_contract(2000, staker_address);
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+
+    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
+    cheat_caller_address_once(contract_address, owner);
+    dispatcher.set_rewards_contract(rewards_contract);
+
+    cheat_caller_address_once(contract_address, rewards_contract);
+    let total_points = dispatcher.new_version();
+    assert!(total_points == 0);
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    cheat_caller_address_once(token_address, staker_address);
+    token_dispatcher.approve(contract_address, amount.into());
+    cheat_caller_address_once(contract_address, staker_address);
+    let stake_id = dispatcher.stake(amount, duration);
+    assert!(stake_id == 1);
+}
