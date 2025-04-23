@@ -207,13 +207,22 @@ fn verify_stake_info(
     assert!(stake_info.vesting_time <= @upper_vesting_time_bound);
 }
 
+fn find_stake_by_id(stake_info: @Span<StakeInfo>, id: Index) -> Option<@StakeInfo> {
+    for i in 0..stake_info.len() {
+        if stake_info.at(i).id == @id {
+            return Some(stake_info.at(i));
+        }
+    }
+    None
+}
+
 fn stake_and_verify_stake_info(
     contract_address: ContractAddress,
     staker_address: ContractAddress,
     token_address: ContractAddress,
     amount: Amount,
     duration: StakeDuration,
-    stake_count: u8,
+    version: Version,
 ) {
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
@@ -222,7 +231,8 @@ fn stake_and_verify_stake_info(
     cheat_caller_address_many(contract_address, staker_address, 2);
     let stake_id = staking_dispatcher.stake(amount, duration);
     let stake_info = staking_dispatcher.get_stake_info();
-    verify_stake_info(stake_info.at(stake_count.into()), stake_id, 0, amount, duration);
+    let stake_info = find_stake_by_id(@stake_info, stake_id);
+    verify_stake_info(stake_info.unwrap(), stake_id, version, amount, duration);
 }
 
 #[test]
@@ -246,27 +256,28 @@ fn test_get_stake_info() {
     let amount: Amount = 500;
     let duration = StakeDuration::ThreeMonths;
     stake_and_verify_stake_info(
-        contract_address, cfg.staker_address, token_address, amount, duration, 1,
+        contract_address, cfg.staker_address, token_address, amount, duration, 0,
     );
 
     let amount: Amount = 250;
     let duration = StakeDuration::SixMonths;
     stake_and_verify_stake_info(
-        contract_address, cfg.staker_address, token_address, amount, duration, 2,
+        contract_address, cfg.staker_address, token_address, amount, duration, 0,
     );
 
     let amount: Amount = 125;
     let duration = StakeDuration::TwelveMonths;
     stake_and_verify_stake_info(
-        contract_address, cfg.staker_address, token_address, amount, duration, 3,
+        contract_address, cfg.staker_address, token_address, amount, duration, 0,
     );
 }
 
 #[test]
+#[should_panic(expected: "Can't close version with no stakes")]
 fn test_new_version_no_stakes() {
     let owner: ContractAddress = 'OWNER'.try_into().unwrap();
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let (token_address, token_dispatcher) = deploy_mock_erc20_contract(2000, staker_address);
+    let (token_address, _) = deploy_mock_erc20_contract(2000, staker_address);
     let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
 
     let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
@@ -281,23 +292,30 @@ fn test_new_version_no_stakes() {
 fn test_new_version() {
     let owner: ContractAddress = 'OWNER'.try_into().unwrap();
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let (token_address, token_dispatcher) = deploy_mock_erc20_contract(2000, staker_address);
+    let (token_address, _) = deploy_mock_erc20_contract(2000, staker_address);
     let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
 
     let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
     cheat_caller_address_once(contract_address, owner);
     dispatcher.set_rewards_contract(rewards_contract);
 
-    cheat_caller_address_once(contract_address, rewards_contract);
-    let total_points = dispatcher.new_version();
-    assert!(total_points == 0);
-
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
-    cheat_caller_address_once(token_address, staker_address);
-    token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_once(contract_address, staker_address);
-    let stake_id = dispatcher.stake(amount, duration);
-    assert!(stake_id == 1);
+    stake_and_verify_stake_info(
+        contract_address, staker_address, token_address, amount, duration, 0,
+    );
 
+    cheat_caller_address_once(contract_address, rewards_contract);
+    let total_points = dispatcher.new_version();
+    assert!(total_points == amount * duration.get_multiplier().into());
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::ThreeMonths;
+    stake_and_verify_stake_info(
+        contract_address, staker_address, token_address, amount, duration, 1,
+    );
+
+    cheat_caller_address_once(contract_address, rewards_contract);
+    let total_points = dispatcher.new_version();
+    assert!(total_points == amount * duration.get_multiplier().into());
 }
