@@ -1,8 +1,13 @@
 use memecoin_staking::types::{Amount, Index, Multiplier, Version};
+use starknet::ContractAddress;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 #[starknet::interface]
 pub trait IMemeCoinStaking<TContractState> {
+    /// Sets the rewards contract address.
+    /// Only callable by the contract owner.
+    fn set_rewards_contract(ref self: TContractState, rewards_contract: ContractAddress);
+
     /// Stakes the specified amount of meme coin for the specified duration.
     /// Returns the stake id.
     fn stake(ref self: TContractState, amount: Amount, duration: StakeDuration) -> Index;

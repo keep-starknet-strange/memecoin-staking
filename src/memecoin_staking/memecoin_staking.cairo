@@ -14,6 +14,10 @@ pub mod MemeCoinStaking {
 
     #[storage]
     struct Storage {
+        /// The owner of the contract.
+        owner: ContractAddress,
+        /// The address of the rewards contract associated with the staking contract.
+        rewards_contract: ContractAddress,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
         /// Stores the points info (total and pending) for each version.
@@ -27,7 +31,10 @@ pub mod MemeCoinStaking {
     }
 
     #[constructor]
-    pub fn constructor(ref self: ContractState, token_address: ContractAddress) {
+    pub fn constructor(
+        ref self: ContractState, owner: ContractAddress, token_address: ContractAddress,
+    ) {
+        self.owner.write(owner);
         self.current_version.write(0);
         self.stake_index.write(1);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
@@ -35,6 +42,11 @@ pub mod MemeCoinStaking {
 
     #[abi(embed_v0)]
     impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
+        fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
+            assert!(self.caller_is_owner(), "Can only be called by the owner");
+            self.rewards_contract.write(rewards_contract);
+        }
+
         fn stake(ref self: ContractState, amount: Amount, duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
             let version = self.current_version.read();
@@ -84,6 +96,12 @@ pub mod MemeCoinStaking {
             let contract_address = get_contract_address();
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher.transfer_from(caller_address, contract_address, amount.into());
+        }
+
+        fn caller_is_owner(self: @ContractState) -> bool {
+            let owner = self.owner.read();
+            let caller = get_caller_address();
+            owner == caller
         }
     }
 }

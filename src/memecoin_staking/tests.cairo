@@ -9,9 +9,11 @@ use snforge_std::{
 use starknet::{ContractAddress, Store};
 
 fn deploy_memecoin_staking_contract(
+    owner: ContractAddress,
     token_address: ContractAddress,
 ) -> (ContractAddress, IMemeCoinStakingDispatcher) {
     let mut calldata = ArrayTrait::new();
+    owner.serialize(ref calldata);
     token_address.serialize(ref calldata);
 
     let memecoin_staking_contract = declare("MemeCoinStaking").unwrap().contract_class();
@@ -46,10 +48,65 @@ fn cheat_caller_address_once(contract_address: ContractAddress, caller_address: 
 }
 
 #[test]
+fn test_constructor() {
+    let owner: ContractAddress = 'owner'.try_into().unwrap();
+    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
+    let (contract_address, _) = deploy_memecoin_staking_contract(owner, token_address);
+
+    let loaded_owner: ContractAddress = (*load(
+        target: contract_address,
+        storage_address: selector!("owner"),
+        size: Store::<ContractAddress>::size().into(),
+    )
+        .at(0))
+        .try_into()
+        .unwrap();
+
+    assert!(loaded_owner == owner);
+}
+
+#[test]
+fn test_set_rewards_contract() {
+    let owner: ContractAddress = 'owner'.try_into().unwrap();
+    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+
+    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
+
+    cheat_caller_address(
+        contract_address: contract_address, caller_address: owner, span: CheatSpan::TargetCalls(1),
+    );
+    dispatcher.set_rewards_contract(rewards_contract);
+
+    let loaded_rewards_contract = (*load(
+        target: contract_address,
+        storage_address: selector!("rewards_contract"),
+        size: Store::<ContractAddress>::size().into(),
+    )
+        .at(0))
+        .try_into()
+        .unwrap();
+
+    assert!(loaded_rewards_contract == rewards_contract);
+}
+
+#[test]
+#[should_panic(expected: "Can only be called by the owner")]
+fn test_set_rewards_contract_wrong_caller() {
+    let owner: ContractAddress = 'owner'.try_into().unwrap();
+    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
+    let (_, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+
+    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
+    dispatcher.set_rewards_contract(rewards_contract);
+}
+
+#[test]
 fn test_stake() {
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
     let (token_address, token_dispatcher) = deploy_mock_erc20_contract(2000, staker_address);
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(token_address);
+    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
@@ -92,7 +149,8 @@ fn test_stake() {
 fn test_stake_without_approve() {
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
     let (token_address, _) = deploy_mock_erc20_contract(1000, staker_address);
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(token_address);
+    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
@@ -105,7 +163,8 @@ fn test_stake_without_approve() {
 fn test_stake_insufficient_balance() {
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
     let (token_address, token_dispatcher) = deploy_mock_erc20_contract(500, staker_address);
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(token_address);
+    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
