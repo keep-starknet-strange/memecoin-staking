@@ -39,9 +39,10 @@ pub mod MemeCoinStaking {
         fn stake(ref self: ContractState, amount: Amount, duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
             let version = self.current_version.read();
+            let points = amount * duration.get_multiplier().into();
             self.transfer_from_caller_to_contract(amount);
             let stake_id = self.stake_update_staker_info(staker_address, duration, version, amount);
-            self.stake_update_points_info(version, amount);
+            self.stake_update_points_info(version, points);
             stake_id
         }
     }
@@ -67,15 +68,15 @@ pub mod MemeCoinStaking {
             stake_index
         }
 
-        fn stake_update_points_info(ref self: ContractState, version: Version, amount: Amount) {
+        fn stake_update_points_info(ref self: ContractState, version: Version, points: Amount) {
             let mut points_info = self.points_info.get(version.into());
             if points_info.is_none() {
                 assert!(self.points_info.len() == version.into(), "Version number is too high");
-                self.points_info.push(PointsInfo { total_points: amount, pending_points: amount });
+                self.points_info.push(PointsInfo { total_points: points, pending_points: points });
             } else {
                 let mut points_info = points_info.unwrap().read();
-                points_info.total_points += amount;
-                points_info.pending_points += amount;
+                points_info.total_points += points;
+                points_info.pending_points += points;
                 self.points_info.at(version.into()).write(points_info);
             }
         }
