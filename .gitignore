@@ -39,6 +39,9 @@ yarn-error.log*
 
 .history
 
+# vimdiff
+*.orig
+
 # Vite
 **/vite.config.ts.timestamp-*
 
