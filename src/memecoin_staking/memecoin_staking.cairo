@@ -93,15 +93,10 @@ pub mod MemeCoinStaking {
                 self.caller_is_rewards_contract(), "Can only be called by the rewards contract",
             );
             let curr_version = self.current_version.read();
-            let total_points = self
-                .points_info
-                .get(curr_version.into())
-                .unwrap()
-                .read()
-                .total_points;
+            let total_points = self.points_info.get(curr_version.into()).unwrap().read();
             assert!(total_points > 0, "Can't close version with no stakes");
-            self.current_version.write(curr_version + 1);
-            self.points_info.push(PointsInfo { total_points: 0, pending_points: 0 });
+            self.current_version.write(value: curr_version + 1);
+            self.points_info.push(value: 0);
             total_points
         }
     }
