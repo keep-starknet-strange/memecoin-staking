@@ -10,8 +10,7 @@ use snforge_std::{
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 fn deploy_memecoin_staking_contract(
-    owner: ContractAddress,
-    token_address: ContractAddress,
+    owner: ContractAddress, token_address: ContractAddress,
 ) -> (ContractAddress, IMemeCoinStakingDispatcher) {
     let mut calldata = ArrayTrait::new();
     owner.serialize(ref calldata);
