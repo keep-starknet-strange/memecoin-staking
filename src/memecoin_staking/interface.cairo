@@ -22,6 +22,9 @@ pub trait IMemeCoinStaking<TContractState> {
         stake_duration: StakeDuration,
         stake_index: Index,
     ) -> Option<StakeInfo>;
+
+    /// Bumps version number, returns total points for the previous version.
+    fn new_version(ref self: TContractState) -> Amount;
 }
 
 /// Different stake durations.
