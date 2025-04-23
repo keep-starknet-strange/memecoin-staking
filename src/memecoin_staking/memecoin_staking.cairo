@@ -39,6 +39,7 @@ pub mod MemeCoinStaking {
         self.current_version.write(0);
         self.stake_index.write(1);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
+        self.points_info.push(PointsInfo { total_points: 0, pending_points: 0 });
     }
 
     #[abi(embed_v0)]
