@@ -213,9 +213,10 @@ fn stake_and_verify_stake_info(
 
 #[test]
 fn test_get_stake_info() {
+    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
     let (token_address, _) = deploy_mock_erc20_contract(2000, staker_address);
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(token_address);
+    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
 
     cheat_caller_address_once(token_address, staker_address);
     let stake_info = dispatcher.get_stake_info();
