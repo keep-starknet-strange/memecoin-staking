@@ -112,6 +112,23 @@ pub mod MemeCoinStaking {
 
             total_points
         }
+
+        fn new_version(ref self: ContractState) -> Amount {
+            assert!(
+                self.caller_is_rewards_contract(), "Can only be called by the rewards contract",
+            );
+            let curr_version = self.current_version.read();
+            let total_points = self
+                .points_info
+                .get(curr_version.into())
+                .unwrap()
+                .read()
+                .total_points;
+            assert!(total_points > 0, "Can't close version with no stakes");
+            self.current_version.write(curr_version + 1);
+            self.points_info.push(PointsInfo { total_points: 0, pending_points: 0 });
+            total_points
+        }
     }
 
     #[generate_trait]
@@ -166,6 +183,12 @@ pub mod MemeCoinStaking {
             token_dispatcher
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
+        }
+
+        fn caller_is_rewards_contract(self: @ContractState) -> bool {
+            let rewards_contract = self.rewards_contract.read();
+            let caller = get_caller_address();
+            rewards_contract == caller
         }
     }
 }
