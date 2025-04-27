@@ -1,3 +1,4 @@
+use memecoin_staking::memecoin_rewards::interface::IMemeCoinRewardsDispatcher;
 use memecoin_staking::memecoin_staking::interface::IMemeCoinStakingDispatcher;
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
 use snforge_std::{CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare};
@@ -31,6 +32,32 @@ pub(crate) fn deploy_mock_erc20_contract(
     let (contract_address, _) = erc20_contract.deploy(@calldata).unwrap();
 
     IERC20Dispatcher { contract_address: contract_address }
+}
+
+pub(crate) fn deploy_memecoin_rewards_contract(
+    owner: ContractAddress, staking_address: ContractAddress, token_address: ContractAddress,
+) -> IMemeCoinRewardsDispatcher {
+    let mut calldata = ArrayTrait::new();
+    owner.serialize(ref calldata);
+    staking_address.serialize(ref calldata);
+    token_address.serialize(ref calldata);
+
+    let memecoin_rewards_contract = declare("MemeCoinRewards").unwrap().contract_class();
+    let (contract_address, _) = memecoin_rewards_contract.deploy(@calldata).unwrap();
+
+    IMemeCoinRewardsDispatcher { contract_address: contract_address }
+}
+
+pub(crate) fn deploy_all_contracts(
+    owner: ContractAddress, initial_supply: u256,
+) -> (IMemeCoinStakingDispatcher, IMemeCoinRewardsDispatcher, IERC20Dispatcher) {
+    let token = deploy_mock_erc20_contract(initial_supply, owner);
+    let staking = deploy_memecoin_staking_contract(owner, token.contract_address);
+    let rewards = deploy_memecoin_rewards_contract(
+        owner, staking.contract_address, token.contract_address,
+    );
+
+    (staking, rewards, token)
 }
 
 pub(crate) fn cheat_caller_address_once(
