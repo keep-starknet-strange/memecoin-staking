@@ -2,11 +2,10 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
     StakeInfo,
 };
+use memecoin_staking::test_utils::*;
 use memecoin_staking::types::{Amount, Index, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{
-    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
-};
+use snforge_std::{CheatSpan, cheat_caller_address, load};
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 
@@ -277,45 +276,59 @@ fn test_get_stake_info() {
 fn test_new_version_no_stakes() {
     let owner: ContractAddress = 'OWNER'.try_into().unwrap();
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let (token_address, _) = deploy_mock_erc20_contract(2000, staker_address);
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+    let token_dispatcher = deploy_mock_erc20_contract(2000, staker_address);
+    let staking_dispatcher = deploy_memecoin_staking_contract(
+        owner, token_dispatcher.contract_address,
+    );
 
     let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
-    cheat_caller_address_once(contract_address, owner);
-    dispatcher.set_rewards_contract(rewards_contract);
+    cheat_caller_address_once(staking_dispatcher.contract_address, owner);
+    staking_dispatcher.set_rewards_contract(rewards_contract);
 
-    cheat_caller_address_once(contract_address, rewards_contract);
-    dispatcher.new_version();
+    cheat_caller_address_once(staking_dispatcher.contract_address, rewards_contract);
+    staking_dispatcher.new_version();
 }
 
 #[test]
 fn test_new_version() {
     let owner: ContractAddress = 'OWNER'.try_into().unwrap();
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let (token_address, _) = deploy_mock_erc20_contract(2000, staker_address);
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+    let token_dispatcher = deploy_mock_erc20_contract(2000, staker_address);
+    let staking_dispatcher = deploy_memecoin_staking_contract(
+        owner, token_dispatcher.contract_address,
+    );
 
     let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
-    cheat_caller_address_once(contract_address, owner);
-    dispatcher.set_rewards_contract(rewards_contract);
+    cheat_caller_address_once(staking_dispatcher.contract_address, owner);
+    staking_dispatcher.set_rewards_contract(rewards_contract);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
     stake_and_verify_stake_info(
-        contract_address, staker_address, token_address, amount, duration, 0,
+        staking_dispatcher.contract_address,
+        staker_address,
+        token_dispatcher.contract_address,
+        amount,
+        duration,
+        0,
     );
 
-    cheat_caller_address_once(contract_address, rewards_contract);
-    let total_points = dispatcher.new_version();
+    cheat_caller_address_once(staking_dispatcher.contract_address, rewards_contract);
+    let total_points = staking_dispatcher.new_version();
     assert!(total_points == amount * duration.get_multiplier().into());
 
     let amount: Amount = 1000;
     let duration = StakeDuration::ThreeMonths;
     stake_and_verify_stake_info(
-        contract_address, staker_address, token_address, amount, duration, 1,
+        staking_dispatcher.contract_address,
+        staker_address,
+        token_dispatcher.contract_address,
+        amount,
+        duration,
+        1,
     );
 
-    cheat_caller_address_once(contract_address, rewards_contract);
-    let total_points = dispatcher.new_version();
+    cheat_caller_address_once(staking_dispatcher.contract_address, rewards_contract);
+    let total_points = staking_dispatcher.new_version();
     assert!(total_points == amount * duration.get_multiplier().into());
 }
