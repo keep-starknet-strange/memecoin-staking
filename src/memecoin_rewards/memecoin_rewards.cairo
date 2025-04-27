@@ -14,24 +14,25 @@ pub mod MemeCoinRewards {
     #[storage]
     struct Storage {
         owner: ContractAddress,
-        staking_contract: ContractAddress,
+        staking_dispatcher: IMemeCoinStakingDispatcher,
         version_info: Vec<VersionInfo>,
         token_dispatcher: IERC20Dispatcher,
     }
 
     #[constructor]
     pub fn constructor(
-        ref self: ContractState, owner: ContractAddress, staking_contract: ContractAddress,
+        ref self: ContractState, owner: ContractAddress, staking_contract: ContractAddress, token_address: ContractAddress,
     ) {
         self.owner.write(owner);
-        self.staking_contract.write(staking_contract);
+        self.staking_dispatcher.write(IMemeCoinStakingDispatcher { contract_address: staking_contract });
+        self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
     }
 
     #[abi(embed_v0)]
     impl MemeCoinRewardsImpl of IMemeCoinRewards<ContractState> {
         fn fund(ref self: ContractState, amount: Amount) {
             assert!(self.caller_is_owner(), "Can only be called by the owner");
-            let total_points = self.get_staking_contract_dispatcher().new_version();
+            let total_points = self.staking_dispatcher.read().new_version();
 
             self.transfer_from_owner(amount);
             self.version_info.push(VersionInfo { total_points, total_rewards: amount });
@@ -42,10 +43,6 @@ pub mod MemeCoinRewards {
     impl InternalMemeCoinRewardsImpl of InternalMemeCoinRewardsTrait {
         fn caller_is_owner(self: @ContractState) -> bool {
             self.owner.read() == get_caller_address()
-        }
-
-        fn get_staking_contract_dispatcher(self: @ContractState) -> IMemeCoinStakingDispatcher {
-            IMemeCoinStakingDispatcher { contract_address: self.staking_contract.read() }
         }
 
         fn transfer_from_owner(self: @ContractState, amount: Amount) {
