@@ -6,7 +6,7 @@ use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
     load_value, stake_and_verify_stake_info, verify_stake_info,
 };
-use memecoin_staking::types::{Amount, Cycle};
+use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
