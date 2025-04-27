@@ -21,10 +21,15 @@ pub mod MemeCoinRewards {
 
     #[constructor]
     pub fn constructor(
-        ref self: ContractState, owner: ContractAddress, staking_contract: ContractAddress, token_address: ContractAddress,
+        ref self: ContractState,
+        owner: ContractAddress,
+        staking_contract: ContractAddress,
+        token_address: ContractAddress,
     ) {
         self.owner.write(owner);
-        self.staking_dispatcher.write(IMemeCoinStakingDispatcher { contract_address: staking_contract });
+        self
+            .staking_dispatcher
+            .write(IMemeCoinStakingDispatcher { contract_address: staking_contract });
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
     }
 
