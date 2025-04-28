@@ -7,13 +7,15 @@ pub mod MemeCoinStaking {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
         Map, MutableVecTrait, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
-        Vec,
+        Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::types::time::time::Time;
 
     #[storage]
     struct Storage {
+        /// The owner of the contract.
+        owner: ContractAddress,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
         /// Stores the points info (total and pending) for each version.
@@ -28,6 +30,7 @@ pub mod MemeCoinStaking {
 
     #[constructor]
     pub fn constructor(ref self: ContractState, token_address: ContractAddress) {
+        self.owner.write(get_caller_address());
         self.current_version.write(0);
         self.stake_index.write(1);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
@@ -45,10 +48,20 @@ pub mod MemeCoinStaking {
             self.stake_update_points_info(version, points);
             stake_id
         }
+
+        fn query_points(self: @ContractState, version: Version) -> PointsInfo {
+            assert!(self.caller_is_owner(), "Only callable by the owner");
+            assert!(version <= self.current_version.read(), "Version number is too high");
+            self.points_info.at(version.into()).read()
+        }
     }
 
     #[generate_trait]
     impl InternalMemeCoinStakingImpl of InternalMemeCoinStakingTrait {
+        fn caller_is_owner(self: @ContractState) -> bool {
+            get_caller_address() == self.owner.read()
+        }
+
         fn stake_update_staker_info(
             ref self: ContractState,
             staker_address: ContractAddress,
