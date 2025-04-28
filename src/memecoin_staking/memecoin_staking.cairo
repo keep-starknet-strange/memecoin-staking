@@ -127,6 +127,12 @@ pub mod MemeCoinStaking {
             self.points_info.push(value: 0);
             total_points
         }
+
+        fn query_points(self: @ContractState, version: Version) -> PointsInfo {
+            assert!(self.caller_is_owner(), "Only callable by the owner");
+            assert!(version <= self.current_version.read(), "Version number is too high");
+            self.points_info.at(version.into()).read()
+        }
     }
 
     #[generate_trait]

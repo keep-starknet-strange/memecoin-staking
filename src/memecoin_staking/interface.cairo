@@ -25,6 +25,9 @@ pub trait IMemeCoinStaking<TContractState> {
 
     /// Bumps version number, returns total points for the previous version.
     fn close_reward_cycle(ref self: TContractState) -> Amount;
+
+    /// Get the points info for the specified version.
+    fn query_points(self: @TContractState, version: Version) -> PointsInfo;
 }
 
 /// Different stake durations.
