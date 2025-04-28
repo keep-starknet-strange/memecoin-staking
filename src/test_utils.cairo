@@ -1,8 +1,38 @@
 use memecoin_staking::memecoin_rewards::interface::IMemeCoinRewardsDispatcher;
 use memecoin_staking::memecoin_staking::interface::IMemeCoinStakingDispatcher;
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-use snforge_std::{CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare};
-use starknet::ContractAddress;
+use snforge_std::{CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load};
+use starknet::{ContractAddress, Store};
+
+pub(crate) struct TestCfg {
+    pub owner: ContractAddress,
+    pub rewards_contract: ContractAddress,
+    pub token_address: ContractAddress,
+    pub staker_address: ContractAddress,
+}
+
+impl TestInitConfigDefault of Default<TestCfg> {
+    fn default() -> TestCfg {
+        TestCfg {
+            token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
+            staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
+            owner: 'OWNER'.try_into().unwrap(),
+            rewards_contract: 'REWARDS_CONTRACT'.try_into().unwrap(),
+        }
+    }
+}
+
+pub(crate) fn load_value<T, +Serde<T>, +Store<T>>(
+    contract_address: ContractAddress, storage_address: felt252,
+) -> T {
+    let size = Store::<T>::size().into();
+    let mut loaded_value = load(
+        target: contract_address, storage_address: storage_address, size: size,
+    )
+        .span();
+    Serde::<T>::deserialize(ref loaded_value).unwrap()
+}
+
 
 pub(crate) fn deploy_memecoin_staking_contract(
     owner: ContractAddress, token_address: ContractAddress,
