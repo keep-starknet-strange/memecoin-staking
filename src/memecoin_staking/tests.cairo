@@ -11,6 +11,8 @@ use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 
 struct TestCfg {
+    pub owner: ContractAddress,
+    pub rewards_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
 }
@@ -20,11 +22,15 @@ impl TestInitConfigDefault of Default<TestCfg> {
         TestCfg {
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
+            owner: 'OWNER'.try_into().unwrap(),
+            rewards_contract: 'REWARDS_CONTRACT'.try_into().unwrap(),
         }
     }
 }
 
-fn deploy_memecoin_staking_contract(owner, token_address: ContractAddress) -> IMemeCoinStakingDispatcher {
+fn deploy_memecoin_staking_contract(
+    owner: ContractAddress, token_address: ContractAddress,
+) -> IMemeCoinStakingDispatcher {
     let mut calldata = ArrayTrait::new();
     owner.serialize(ref calldata);
     token_address.serialize(ref calldata);
@@ -80,16 +86,19 @@ fn load_value<T, +Serde<T>, +Store<T>>(
 #[test]
 fn test_constructor() {
     let cfg: TestCfg = Default::default();
-    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.token_address);
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.owner, cfg.token_address);
     let contract_address = staking_dispatcher.contract_address;
 
-    let loaded_stake_index = load_value::<Index>(contract_address, selector!("stake_index"));
-    assert!(loaded_stake_index == 1);
+    let loaded_owner = load_value::<ContractAddress>(contract_address, selector!("owner"));
+    assert!(loaded_owner == cfg.owner);
 
     let loaded_current_version = load_value::<
         Version,
     >(contract_address, selector!("current_version"));
     assert!(loaded_current_version == 0);
+
+    let loaded_stake_index = load_value::<Index>(contract_address, selector!("stake_index"));
+    assert!(loaded_stake_index == 1);
 
     let loaded_token_dispatcher = load_value::<
         IERC20Dispatcher,
@@ -98,57 +107,28 @@ fn test_constructor() {
 }
 
 #[test]
-fn test_constructor() {
-    let owner: ContractAddress = 'owner'.try_into().unwrap();
-    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
-    let (contract_address, _) = deploy_memecoin_staking_contract(owner, token_address);
-
-    let loaded_owner: ContractAddress = (*load(
-        target: contract_address,
-        storage_address: selector!("owner"),
-        size: Store::<ContractAddress>::size().into(),
-    )
-        .at(0))
-        .try_into()
-        .unwrap();
-
-    assert!(loaded_owner == owner);
-}
-
-#[test]
 fn test_set_rewards_contract() {
-    let owner: ContractAddress = 'owner'.try_into().unwrap();
-    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+    let cfg: TestCfg = Default::default();
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.owner, cfg.token_address);
+    let contract_address = staking_dispatcher.contract_address;
 
-    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
+    cheat_caller_address_once(contract_address, cfg.owner);
+    staking_dispatcher.set_rewards_contract(cfg.rewards_contract);
 
-    cheat_caller_address(
-        contract_address: contract_address, caller_address: owner, span: CheatSpan::TargetCalls(1),
-    );
-    dispatcher.set_rewards_contract(rewards_contract);
+    let loaded_rewards_contract = load_value::<
+        ContractAddress,
+    >(contract_address, selector!("rewards_contract"));
 
-    let loaded_rewards_contract = (*load(
-        target: contract_address,
-        storage_address: selector!("rewards_contract"),
-        size: Store::<ContractAddress>::size().into(),
-    )
-        .at(0))
-        .try_into()
-        .unwrap();
-
-    assert!(loaded_rewards_contract == rewards_contract);
+    assert!(loaded_rewards_contract == cfg.rewards_contract);
 }
 
 #[test]
 #[should_panic(expected: "Can only be called by the owner")]
 fn test_set_rewards_contract_wrong_caller() {
-    let owner: ContractAddress = 'owner'.try_into().unwrap();
-    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
-    let (_, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+    let cfg: TestCfg = Default::default();
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.owner, cfg.token_address);
 
-    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
-    dispatcher.set_rewards_contract(rewards_contract);
+    staking_dispatcher.set_rewards_contract(cfg.rewards_contract);
 }
 
 #[test]
@@ -156,7 +136,7 @@ fn test_stake() {
     let cfg: TestCfg = Default::default();
     let token_dispatcher = deploy_mock_erc20_contract(2000, cfg.staker_address);
     let token_address = token_dispatcher.contract_address;
-    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.owner, token_address);
     let contract_address = staking_dispatcher.contract_address;
 
     let amount: Amount = 1000;
@@ -189,7 +169,7 @@ fn test_stake_without_approve() {
     let cfg: TestCfg = Default::default();
     let token_dispatcher = deploy_mock_erc20_contract(1000, cfg.staker_address);
     let token_address = token_dispatcher.contract_address;
-    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.owner, token_address);
     let contract_address = staking_dispatcher.contract_address;
 
     let amount: Amount = 1000;
@@ -204,7 +184,7 @@ fn test_stake_insufficient_balance() {
     let cfg: TestCfg = Default::default();
     let token_dispatcher = deploy_mock_erc20_contract(500, cfg.staker_address);
     let token_address = token_dispatcher.contract_address;
-    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.owner, token_address);
     let contract_address = staking_dispatcher.contract_address;
 
     let amount: Amount = 1000;
@@ -247,36 +227,37 @@ fn stake_and_verify_stake_info(
 
 #[test]
 fn test_get_stake_info() {
-    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
-    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let (token_address, _) = deploy_mock_erc20_contract(2000, staker_address);
-    let (contract_address, dispatcher) = deploy_memecoin_staking_contract(owner, token_address);
+    let cfg: TestCfg = Default::default();
+    let token_dispatcher = deploy_mock_erc20_contract(2000, cfg.staker_address);
+    let token_address = token_dispatcher.contract_address;
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.owner, token_address);
+    let contract_address = staking_dispatcher.contract_address;
 
-    cheat_caller_address_once(token_address, staker_address);
-    let stake_info = dispatcher.get_stake_info();
+    cheat_caller_address_once(token_address, cfg.staker_address);
+    let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 0);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
     stake_and_verify_stake_info(
-        contract_address, staker_address, token_address, amount, duration, 0,
+        contract_address, cfg.staker_address, token_address, amount, duration, 0,
     );
 
     let amount: Amount = 500;
     let duration = StakeDuration::ThreeMonths;
     stake_and_verify_stake_info(
-        contract_address, staker_address, token_address, amount, duration, 1,
+        contract_address, cfg.staker_address, token_address, amount, duration, 1,
     );
 
     let amount: Amount = 250;
     let duration = StakeDuration::SixMonths;
     stake_and_verify_stake_info(
-        contract_address, staker_address, token_address, amount, duration, 2,
+        contract_address, cfg.staker_address, token_address, amount, duration, 2,
     );
 
     let amount: Amount = 125;
     let duration = StakeDuration::TwelveMonths;
     stake_and_verify_stake_info(
-        contract_address, staker_address, token_address, amount, duration, 3,
+        contract_address, cfg.staker_address, token_address, amount, duration, 3,
     );
 }
