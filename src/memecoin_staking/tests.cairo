@@ -149,7 +149,7 @@ fn verify_stake_info(
     stake_info: @StakeInfo, id: Index, version: Version, amount: Amount, duration: StakeDuration,
 ) {
     let lower_vesting_time_bound = Time::now().add(duration.to_time_delta() - Time::seconds(1));
-    let upper_vesting_time_bound = Time::now().add(duration.to_time_delta());
+    let upper_vesting_time_bound = lower_vesting_time_bound.add(Time::seconds(1));
     assert!(stake_info.id == @id);
     assert!(stake_info.version == @version);
     assert!(stake_info.amount == @amount);
