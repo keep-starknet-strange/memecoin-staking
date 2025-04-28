@@ -9,6 +9,21 @@ use snforge_std::{
 };
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
+
+struct TestCfg {
+    pub token_address: ContractAddress,
+    pub staker_address: ContractAddress,
+}
+
+impl TestInitConfigDefault of Default<TestCfg> {
+    fn default() -> TestCfg {
+        TestCfg {
+            token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
+            staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
+        }
+    }
+}
+
 fn deploy_memecoin_staking_contract(token_address: ContractAddress) -> IMemeCoinStakingDispatcher {
     let mut calldata = ArrayTrait::new();
     token_address.serialize(ref calldata);
@@ -63,8 +78,8 @@ fn load_value<T, +Serde<T>, +Store<T>>(
 
 #[test]
 fn test_constructor() {
-    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
-    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+    let cfg: TestCfg = Default::default();
+    let staking_dispatcher = deploy_memecoin_staking_contract(cfg.token_address);
     let contract_address = staking_dispatcher.contract_address;
 
     let loaded_stake_index = load_value::<Index>(contract_address, selector!("stake_index"));
@@ -78,29 +93,29 @@ fn test_constructor() {
     let loaded_token_dispatcher = load_value::<
         IERC20Dispatcher,
     >(contract_address, selector!("token_dispatcher"));
-    assert!(loaded_token_dispatcher.contract_address == token_address);
+    assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
 }
 
 #[test]
 fn test_stake() {
-    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let token_dispatcher = deploy_mock_erc20_contract(2000, staker_address);
+    let cfg: TestCfg = Default::default();
+    let token_dispatcher = deploy_mock_erc20_contract(2000, cfg.staker_address);
     let token_address = token_dispatcher.contract_address;
     let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
     let contract_address = staking_dispatcher.contract_address;
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
-    cheat_caller_address_once(token_address, staker_address);
+    cheat_caller_address_once(token_address, cfg.staker_address);
     token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_once(contract_address, staker_address);
+    cheat_caller_address_once(contract_address, cfg.staker_address);
     let stake_id = staking_dispatcher.stake(amount, duration);
     assert!(stake_id == 1);
 
     let duration = StakeDuration::ThreeMonths;
-    cheat_caller_address_once(token_address, staker_address);
+    cheat_caller_address_once(token_address, cfg.staker_address);
     token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_once(contract_address, staker_address);
+    cheat_caller_address_once(contract_address, cfg.staker_address);
     let stake_id = staking_dispatcher.stake(amount, duration);
     assert!(stake_id == 2);
 
@@ -116,32 +131,32 @@ fn test_stake() {
 #[test]
 #[should_panic(expected: 'ERC20: insufficient allowance')]
 fn test_stake_without_approve() {
-    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let token_dispatcher = deploy_mock_erc20_contract(1000, staker_address);
+    let cfg: TestCfg = Default::default();
+    let token_dispatcher = deploy_mock_erc20_contract(1000, cfg.staker_address);
     let token_address = token_dispatcher.contract_address;
     let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
     let contract_address = staking_dispatcher.contract_address;
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
-    cheat_caller_address_once(contract_address, staker_address);
+    cheat_caller_address_once(contract_address, cfg.staker_address);
     staking_dispatcher.stake(amount, duration);
 }
 
 #[test]
 #[should_panic(expected: 'ERC20: insufficient balance')]
 fn test_stake_insufficient_balance() {
-    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
-    let token_dispatcher = deploy_mock_erc20_contract(500, staker_address);
+    let cfg: TestCfg = Default::default();
+    let token_dispatcher = deploy_mock_erc20_contract(500, cfg.staker_address);
     let token_address = token_dispatcher.contract_address;
     let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
     let contract_address = staking_dispatcher.contract_address;
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
-    cheat_caller_address_once(token_address, staker_address);
+    cheat_caller_address_once(token_address, cfg.staker_address);
     token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_once(contract_address, staker_address);
+    cheat_caller_address_once(contract_address, cfg.staker_address);
     staking_dispatcher.stake(amount, duration);
 }
 
