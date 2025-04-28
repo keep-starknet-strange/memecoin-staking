@@ -16,19 +16,24 @@ fn deploy_memecoin_staking_contract(owner: ContractAddress) -> IMemeCoinStakingD
     IMemeCoinStakingDispatcher { contract_address: contract_address }
 }
 
+fn load_value<T, +Serde<T>, +Store<T>>(
+    contract_address: ContractAddress, storage_address: felt252,
+) -> T {
+    let size = Store::<T>::size().into();
+    let mut loaded_value = load(
+        target: contract_address, storage_address: storage_address, size: size,
+    )
+        .span();
+    Serde::<T>::deserialize(ref loaded_value).unwrap()
+}
+
 #[test]
 fn test_constructor() {
     let owner: ContractAddress = 'OWNER'.try_into().unwrap();
     let dispatcher = deploy_memecoin_staking_contract(owner);
     let contract_address = dispatcher.contract_address;
 
-    let mut loaded_value = load(
-        target: contract_address,
-        storage_address: selector!("owner"),
-        size: Store::<ContractAddress>::size().into(),
-    )
-        .span();
-    let loaded_owner = Serde::<ContractAddress>::deserialize(ref loaded_value).unwrap();
+    let loaded_owner = load_value::<ContractAddress>(contract_address, selector!("owner"));
 
     assert!(loaded_owner == owner);
 }
@@ -46,13 +51,9 @@ fn test_set_rewards_contract() {
     );
     dispatcher.set_rewards_contract(rewards_contract);
 
-    let mut loaded_value = load(
-        target: contract_address,
-        storage_address: selector!("rewards_contract"),
-        size: Store::<ContractAddress>::size().into(),
-    )
-        .span();
-    let loaded_rewards_contract = Serde::<ContractAddress>::deserialize(ref loaded_value).unwrap();
+    let loaded_rewards_contract = load_value::<
+        ContractAddress,
+    >(contract_address, selector!("rewards_contract"));
 
     assert!(loaded_rewards_contract == rewards_contract);
 }
