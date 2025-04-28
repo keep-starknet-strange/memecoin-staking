@@ -22,8 +22,7 @@ fn deploy_memecoin_staking_contract(
 }
 
 fn deploy_mock_erc20_contract(
-    initial_supply: u256,
-    owner_address: ContractAddress,
+    initial_supply: u256, owner_address: ContractAddress,
 ) -> IERC20Dispatcher {
     let mut calldata = ArrayTrait::new();
     let name: ByteArray = "NAME";
@@ -53,6 +52,17 @@ fn cheat_caller_address_many(
     );
 }
 
+fn load_value<T, +Serde<T>, +Store<T>>(
+    contract_address: ContractAddress, storage_address: felt252,
+) -> T {
+    let size = Store::<T>::size().into();
+    let mut loaded_value = load(
+        target: contract_address, storage_address: storage_address, size: size,
+    )
+        .span();
+    Serde::<T>::deserialize(ref loaded_value).unwrap()
+}
+
 #[test]
 fn test_stake() {
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
@@ -76,22 +86,12 @@ fn test_stake() {
     let stake_id = staking_dispatcher.stake(amount, duration);
     assert!(stake_id == 2);
 
-    let mut loaded_value = load(
-        target: contract_address,
-        storage_address: selector!("stake_index"),
-        size: Store::<Index>::size().into(),
-    )
-        .span();
-    let loaded_stake_id = Serde::<Index>::deserialize(ref loaded_value).unwrap();
+    let loaded_stake_id = load_value::<Index>(contract_address, selector!("stake_index"));
     assert!(loaded_stake_id == 3);
 
-    loaded_value = load(
-        target: contract_address,
-        storage_address: selector!("current_version"),
-        size: Store::<Version>::size().into(),
-    )
-        .span();
-    let loaded_current_version = Serde::<Version>::deserialize(ref loaded_value).unwrap();
+    let loaded_current_version = load_value::<
+        Version,
+    >(contract_address, selector!("current_version"));
     assert!(loaded_current_version == 0);
 }
 
