@@ -9,9 +9,7 @@ use snforge_std::{
 };
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
-fn deploy_memecoin_staking_contract(
-    token_address: ContractAddress,
-) -> IMemeCoinStakingDispatcher {
+fn deploy_memecoin_staking_contract(token_address: ContractAddress) -> IMemeCoinStakingDispatcher {
     let mut calldata = ArrayTrait::new();
     token_address.serialize(ref calldata);
 
@@ -61,6 +59,26 @@ fn load_value<T, +Serde<T>, +Store<T>>(
     )
         .span();
     Serde::<T>::deserialize(ref loaded_value).unwrap()
+}
+
+#[test]
+fn test_constructor() {
+    let token_address = 'TOKEN_ADDRESS'.try_into().unwrap();
+    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+    let contract_address = staking_dispatcher.contract_address;
+
+    let loaded_stake_index = load_value::<Index>(contract_address, selector!("stake_index"));
+    assert!(loaded_stake_index == 1);
+
+    let loaded_current_version = load_value::<
+        Version,
+    >(contract_address, selector!("current_version"));
+    assert!(loaded_current_version == 0);
+
+    let loaded_token_dispatcher = load_value::<
+        IERC20Dispatcher,
+    >(contract_address, selector!("token_dispatcher"));
+    assert!(loaded_token_dispatcher.contract_address == token_address);
 }
 
 #[test]
