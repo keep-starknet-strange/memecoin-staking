@@ -333,3 +333,60 @@ fn test_close_reward_cycle() {
     >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
     assert!(loaded_current_reward_cycle == reward_cycle);
 }
+
+#[test]
+fn test_query_points() {
+    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    let token_dispatcher = deploy_mock_erc20_contract(3000, staker_address);
+    let token_address = token_dispatcher.contract_address;
+    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+    let contract_address = staking_dispatcher.contract_address;
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    cheat_caller_address_once(token_address, staker_address);
+    token_dispatcher.approve(contract_address, amount.into());
+    cheat_caller_address_once(contract_address, staker_address);
+    staking_dispatcher.stake(amount, duration);
+
+    let mut points = amount * duration.get_multiplier().into();
+    let points_info = staking_dispatcher.query_points(0);
+    assert!(points_info.total_points == points);
+    assert!(points_info.pending_points == points);
+
+    let amount: Amount = 2000;
+    let duration = StakeDuration::ThreeMonths;
+    cheat_caller_address_once(token_address, staker_address);
+    token_dispatcher.approve(contract_address, amount.into());
+    cheat_caller_address_once(contract_address, staker_address);
+    staking_dispatcher.stake(amount, duration);
+
+    points += amount * duration.get_multiplier().into();
+    let points_info = staking_dispatcher.query_points(0);
+    assert!(points_info.total_points == points);
+    assert!(points_info.pending_points == points);
+}
+
+#[test]
+#[should_panic(expected: "Version number is too high")]
+fn test_query_points_high_version() {
+    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    let token_dispatcher = deploy_mock_erc20_contract(2000, staker_address);
+    let token_address = token_dispatcher.contract_address;
+    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+
+    staking_dispatcher.query_points(1);
+}
+
+#[test]
+#[should_panic(expected: "Only callable by the owner")]
+fn test_query_points_wrong_caller() {
+    let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
+    let token_dispatcher = deploy_mock_erc20_contract(2000, staker_address);
+    let token_address = token_dispatcher.contract_address;
+    let staking_dispatcher = deploy_memecoin_staking_contract(token_address);
+    let staking_address = staking_dispatcher.contract_address;
+
+    cheat_caller_address_once(staking_address, staker_address);
+    staking_dispatcher.query_points(0);
+}
