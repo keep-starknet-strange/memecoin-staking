@@ -63,16 +63,6 @@ fn load_value<T, +Serde<T>, +Store<T>>(
     Serde::<T>::deserialize(ref loaded_value).unwrap()
 }
 
-fn cheat_caller_address_many(
-    contract_address: ContractAddress, caller_address: ContractAddress, times: u8,
-) {
-    cheat_caller_address(
-        contract_address: contract_address,
-        caller_address: caller_address,
-        span: CheatSpan::TargetCalls(times.into()),
-    );
-}
-
 #[test]
 fn test_stake() {
     let staker_address: ContractAddress = 'STAKER_ADDRESS'.try_into().unwrap();
