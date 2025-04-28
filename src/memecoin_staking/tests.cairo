@@ -6,6 +6,20 @@ use snforge_std::{
 };
 use starknet::{ContractAddress, Store};
 
+struct TestCfg {
+    pub owner: ContractAddress,
+    pub rewards_contract: ContractAddress,
+}
+
+impl TestInitConfigDefault of Default<TestCfg> {
+    fn default() -> TestCfg {
+        TestCfg {
+            owner: 'OWNER'.try_into().unwrap(),
+            rewards_contract: 'REWARDS_CONTRACT'.try_into().unwrap(),
+        }
+    }
+}
+
 fn deploy_memecoin_staking_contract(owner: ContractAddress) -> IMemeCoinStakingDispatcher {
     let mut calldata = ArrayTrait::new();
     owner.serialize(ref calldata);
@@ -29,27 +43,27 @@ fn load_value<T, +Serde<T>, +Store<T>>(
 
 #[test]
 fn test_constructor() {
-    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
-    let dispatcher = deploy_memecoin_staking_contract(owner);
+    let cfg: TestCfg = Default::default();
+    let dispatcher = deploy_memecoin_staking_contract(cfg.owner);
     let contract_address = dispatcher.contract_address;
 
     let loaded_owner = load_value::<ContractAddress>(contract_address, selector!("owner"));
 
-    assert!(loaded_owner == owner);
+    assert!(loaded_owner == cfg.owner);
 }
 
 #[test]
 fn test_set_rewards_contract() {
-    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
-    let dispatcher = deploy_memecoin_staking_contract(owner);
+    let cfg: TestCfg = Default::default();
+    let dispatcher = deploy_memecoin_staking_contract(cfg.owner);
     let contract_address = dispatcher.contract_address;
 
     let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
 
     cheat_caller_address(
-        contract_address: contract_address, caller_address: owner, span: CheatSpan::TargetCalls(1),
+        contract_address: contract_address, caller_address: cfg.owner, span: CheatSpan::TargetCalls(1),
     );
-    dispatcher.set_rewards_contract(rewards_contract);
+    dispatcher.set_rewards_contract(cfg.rewards_contract);
 
     let loaded_rewards_contract = load_value::<
         ContractAddress,
@@ -61,8 +75,8 @@ fn test_set_rewards_contract() {
 #[test]
 #[should_panic(expected: "Can only be called by the owner")]
 fn test_set_rewards_contract_wrong_caller() {
-    let owner: ContractAddress = 'OWNER'.try_into().unwrap();
-    let dispatcher = deploy_memecoin_staking_contract(owner);
+    let cfg: TestCfg = Default::default();
+    let dispatcher = deploy_memecoin_staking_contract(cfg.owner);
     let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
     dispatcher.set_rewards_contract(rewards_contract);
 }
