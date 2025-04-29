@@ -58,8 +58,6 @@ fn test_set_rewards_contract() {
     let dispatcher = deploy_memecoin_staking_contract(cfg.owner);
     let contract_address = dispatcher.contract_address;
 
-    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
-
     cheat_caller_address(
         contract_address: contract_address,
         caller_address: cfg.owner,
@@ -71,7 +69,7 @@ fn test_set_rewards_contract() {
         ContractAddress,
     >(contract_address, selector!("rewards_contract"));
 
-    assert!(loaded_rewards_contract == rewards_contract);
+    assert!(loaded_rewards_contract == cfg.rewards_contract);
 }
 
 #[test]
@@ -79,6 +77,6 @@ fn test_set_rewards_contract() {
 fn test_set_rewards_contract_wrong_caller() {
     let cfg: TestCfg = Default::default();
     let dispatcher = deploy_memecoin_staking_contract(cfg.owner);
-    let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
-    dispatcher.set_rewards_contract(rewards_contract);
+
+    dispatcher.set_rewards_contract(cfg.rewards_contract);
 }
