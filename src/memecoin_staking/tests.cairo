@@ -61,7 +61,9 @@ fn test_set_rewards_contract() {
     let rewards_contract: ContractAddress = 'REWARDS_CONTRACT'.try_into().unwrap();
 
     cheat_caller_address(
-        contract_address: contract_address, caller_address: cfg.owner, span: CheatSpan::TargetCalls(1),
+        contract_address: contract_address,
+        caller_address: cfg.owner,
+        span: CheatSpan::TargetCalls(1),
     );
     dispatcher.set_rewards_contract(cfg.rewards_contract);
 
