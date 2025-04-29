@@ -17,6 +17,7 @@ build
 # misc
 .DS_Store
 *.pem
+*.bak
 
 # debug
 npm-debug.log*
@@ -68,3 +69,4 @@ target
 .snfoundry_versioned_programs
 snfoundry_trace
 coverage_report
+
