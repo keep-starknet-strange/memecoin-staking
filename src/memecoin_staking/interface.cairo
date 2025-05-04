@@ -1,15 +1,26 @@
 use memecoin_staking::types::{Amount, Index, Multiplier, Version};
+use starknet::ContractAddress;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 #[starknet::interface]
 pub trait IMemeCoinStaking<TContractState> {
+    /// Sets the rewards contract address.
+    /// Only callable by the contract owner.
+    fn set_rewards_contract(ref self: TContractState, rewards_contract: ContractAddress);
+
     /// Stakes the specified amount of meme coin for the specified duration.
     /// Returns the stake id.
     fn stake(ref self: TContractState, amount: Amount, duration: StakeDuration) -> Index;
+
+    /// Get info for all stakes for the caller.
+    fn get_stake_info(self: @TContractState) -> Span<StakeInfo>;
+
+    /// Bumps version number, returns total points for the previous version.
+    fn new_version(ref self: TContractState) -> Amount;
 }
 
 /// Different stake durations.
-#[derive(starknet::Store, Drop, Hash, Serde, Copy)]
+#[derive(starknet::Store, Drop, Hash, Serde, Copy, PartialEq)]
 pub enum StakeDuration {
     #[default]
     OneMonth,
@@ -41,6 +52,42 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
     }
 }
 
+/// Iterator over all stake duration options.
+#[derive(Drop)]
+struct StakeDurationIter {
+    stake_duration: Option<StakeDuration>,
+}
+
+#[generate_trait]
+pub(crate) impl StakeDurationIterImpl of StakeDurationIterTrait {
+    fn new() -> StakeDurationIter {
+        StakeDurationIter { stake_duration: Some(StakeDuration::OneMonth) }
+    }
+}
+
+pub(crate) impl StakeDurationIteratorImpl of Iterator<StakeDurationIter> {
+    type Item = StakeDuration;
+
+    fn next(ref self: StakeDurationIter) -> Option<StakeDuration> {
+        let prev = self.stake_duration;
+        if let Some(duration) = self.stake_duration {
+            match duration {
+                StakeDuration::OneMonth => {
+                    self.stake_duration = Some(StakeDuration::ThreeMonths);
+                },
+                StakeDuration::ThreeMonths => {
+                    self.stake_duration = Some(StakeDuration::SixMonths);
+                },
+                StakeDuration::SixMonths => {
+                    self.stake_duration = Some(StakeDuration::TwelveMonths);
+                },
+                StakeDuration::TwelveMonths => { self.stake_duration = None; },
+            }
+        }
+        prev
+    }
+}
+
 /// Points info for each version.
 #[derive(starknet::Store, Drop)]
 pub struct PointsInfo {
@@ -51,7 +98,7 @@ pub struct PointsInfo {
 }
 
 /// Stake info for each stake.
-#[derive(starknet::Store, Drop)]
+#[derive(starknet::Store, Drop, Serde)]
 pub struct StakeInfo {
     /// The stake id (unique to the contract, used for unstaking).
     pub id: Index,

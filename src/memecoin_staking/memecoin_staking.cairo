@@ -1,19 +1,24 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
     use memecoin_staking::memecoin_staking::interface::{
-        IMemeCoinStaking, PointsInfo, StakeDuration, StakeDurationTrait, StakeInfo,
+        IMemeCoinStaking, PointsInfo, StakeDuration, StakeDurationIterTrait, StakeDurationTrait,
+        StakeInfo,
     };
     use memecoin_staking::types::{Amount, Index, Version};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
         Map, MutableVecTrait, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
-        Vec,
+        Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::types::time::time::Time;
 
     #[storage]
     struct Storage {
+        /// The owner of the contract.
+        owner: ContractAddress,
+        /// The address of the rewards contract associated with the staking contract.
+        rewards_contract: ContractAddress,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
         /// Stores the points info (total and pending) for each version.
@@ -27,7 +32,10 @@ pub mod MemeCoinStaking {
     }
 
     #[constructor]
-    pub fn constructor(ref self: ContractState, token_address: ContractAddress) {
+    pub fn constructor(
+        ref self: ContractState, owner: ContractAddress, token_address: ContractAddress,
+    ) {
+        self.owner.write(owner);
         self.current_version.write(0);
         self.stake_index.write(1);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
@@ -36,6 +44,11 @@ pub mod MemeCoinStaking {
 
     #[abi(embed_v0)]
     impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
+        fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
+            assert!(self.caller_is_owner(), "Can only be called by the owner");
+            self.rewards_contract.write(rewards_contract);
+        }
+
         fn stake(ref self: ContractState, amount: Amount, duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
             let version = self.current_version.read();
@@ -44,6 +57,36 @@ pub mod MemeCoinStaking {
             let stake_id = self.stake_update_staker_info(staker_address, duration, version, amount);
             self.stake_update_points_info(version, points);
             stake_id
+        }
+
+        fn get_stake_info(self: @ContractState) -> Span<StakeInfo> {
+            let staker_address = get_caller_address();
+            let mut result = array![];
+            let staker_info = self.staker_info.entry(staker_address);
+            for duration in StakeDurationIterTrait::new() {
+                let staker_info = staker_info.entry(duration);
+                for i in 0..staker_info.len() {
+                    result.append(staker_info.at(i).read());
+                }
+            }
+            result.span()
+        }
+
+        fn new_version(ref self: ContractState) -> Amount {
+            assert!(
+                self.caller_is_rewards_contract(), "Can only be called by the rewards contract",
+            );
+            let curr_version = self.current_version.read();
+            let total_points = self
+                .points_info
+                .get(curr_version.into())
+                .unwrap()
+                .read()
+                .total_points;
+            assert!(total_points > 0, "Can't close version with no stakes");
+            self.current_version.write(curr_version + 1);
+            self.points_info.push(PointsInfo { total_points: 0, pending_points: 0 });
+            total_points
         }
     }
 
@@ -86,6 +129,18 @@ pub mod MemeCoinStaking {
             let contract_address = get_contract_address();
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher.transfer_from(caller_address, contract_address, amount.into());
+        }
+
+        fn caller_is_owner(self: @ContractState) -> bool {
+            let owner = self.owner.read();
+            let caller = get_caller_address();
+            owner == caller
+        }
+
+        fn caller_is_rewards_contract(self: @ContractState) -> bool {
+            let rewards_contract = self.rewards_contract.read();
+            let caller = get_caller_address();
+            rewards_contract == caller
         }
     }
 }
