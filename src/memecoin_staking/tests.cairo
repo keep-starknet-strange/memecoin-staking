@@ -76,6 +76,19 @@ fn load_value<T, +Serde<T>, +Store<T>>(
     Serde::<T>::deserialize(ref loaded_value).unwrap()
 }
 
+fn approve_and_stake(
+    token_dispatcher: @IERC20Dispatcher,
+    staking_dispatcher: @IMemeCoinStakingDispatcher,
+    staker_address: ContractAddress,
+    amount: Amount,
+    duration: StakeDuration,
+) -> Index {
+    cheat_caller_address_once(*token_dispatcher.contract_address, staker_address);
+    token_dispatcher.approve(*staking_dispatcher.contract_address, amount.into());
+    cheat_caller_address_once(*staking_dispatcher.contract_address, staker_address);
+    staking_dispatcher.stake(amount, duration)
+}
+
 #[test]
 fn test_constructor() {
     let cfg: TestCfg = Default::default();
@@ -106,17 +119,16 @@ fn test_stake() {
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
-    cheat_caller_address_once(token_address, cfg.staker_address);
-    token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_once(contract_address, cfg.staker_address);
-    let stake_id = staking_dispatcher.stake(amount, duration);
+    let stake_id = approve_and_stake(
+        @token_dispatcher, @staking_dispatcher, cfg.staker_address, amount, duration,
+    );
     assert!(stake_id == 1);
 
+    let amount: Amount = 1000;
     let duration = StakeDuration::ThreeMonths;
-    cheat_caller_address_once(token_address, cfg.staker_address);
-    token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_once(contract_address, cfg.staker_address);
-    let stake_id = staking_dispatcher.stake(amount, duration);
+    let stake_id = approve_and_stake(
+        @token_dispatcher, @staking_dispatcher, cfg.staker_address, amount, duration,
+    );
     assert!(stake_id == 2);
 
     let loaded_stake_id = load_value::<Index>(contract_address, selector!("stake_index"));
