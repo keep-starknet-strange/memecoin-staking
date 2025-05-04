@@ -194,10 +194,10 @@ fn stake_and_verify_stake_info(
 ) {
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
-    cheat_caller_address_once(token_address, staker_address);
-    token_dispatcher.approve(contract_address, amount.into());
-    cheat_caller_address_many(contract_address, staker_address, 2);
-    let stake_id = staking_dispatcher.stake(amount, duration);
+    let stake_id = approve_and_stake(
+        @token_dispatcher, @staking_dispatcher, staker_address, amount, duration,
+    );
+    cheat_caller_address_once(contract_address, staker_address);
     let stake_info = staking_dispatcher.get_stake_info();
     verify_stake_info(stake_info.at(stake_count.into()), stake_id, 0, amount, duration);
 }
