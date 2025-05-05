@@ -6,6 +6,9 @@ pub trait IMemeCoinStaking<TContractState> {
     /// Stakes the specified amount of meme coin for the specified duration.
     /// Returns the stake id.
     fn stake(ref self: TContractState, amount: Amount, duration: StakeDuration) -> Index;
+
+    /// Get the points info for the specified version.
+    fn query_points(self: @TContractState, version: Version) -> PointsInfo;
 }
 
 /// Different stake durations.
@@ -42,7 +45,7 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
 }
 
 /// Points info for each version.
-#[derive(starknet::Store, Drop)]
+#[derive(starknet::Store, Drop, Serde)]
 pub struct PointsInfo {
     /// The total points across all stakes for this version.
     pub total_points: Amount,
