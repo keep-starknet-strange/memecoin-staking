@@ -41,15 +41,6 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
     }
 }
 
-/// Points info for each version.
-#[derive(starknet::Store, Drop)]
-pub struct PointsInfo {
-    /// The total points across all stakes for this version.
-    pub total_points: Amount,
-    /// The pending points (unvested) across all stakes for this version.
-    pub pending_points: Amount,
-}
-
 /// Stake info for each stake.
 #[derive(starknet::Store, Drop)]
 pub struct StakeInfo {
