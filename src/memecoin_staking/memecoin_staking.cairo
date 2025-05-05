@@ -1,8 +1,7 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
     use memecoin_staking::memecoin_staking::interface::{
-        IMemeCoinStaking, PointsInfo, StakeDuration, StakeDurationIterTrait, StakeDurationTrait,
-        StakeInfo,
+        IMemeCoinStaking, StakeDuration, StakeDurationIterTrait, StakeDurationTrait, StakeInfo,
     };
     use memecoin_staking::types::{Amount, Index, Version};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -17,8 +16,8 @@ pub mod MemeCoinStaking {
     struct Storage {
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
-        /// Stores the points info (total and pending) for each version.
-        points_info: Vec<PointsInfo>,
+        /// Stores the total points for each version.
+        points_info: Vec<Amount>,
         /// The current version number.
         current_version: Version,
         /// The index of the next stake.
@@ -32,7 +31,7 @@ pub mod MemeCoinStaking {
         self.current_version.write(0);
         self.stake_index.write(1);
         self.token_dispatcher.write(IERC20Dispatcher { contract_address: token_address });
-        self.points_info.push(PointsInfo { total_points: 0, pending_points: 0 });
+        self.points_info.push(0);
     }
 
     #[abi(embed_v0)]
@@ -86,11 +85,10 @@ pub mod MemeCoinStaking {
             let mut points_info = self.points_info.get(version.into());
             if points_info.is_none() {
                 assert!(self.points_info.len() == version.into(), "Version number is too high");
-                self.points_info.push(PointsInfo { total_points: points, pending_points: points });
+                self.points_info.push(points);
             } else {
                 let mut points_info = points_info.unwrap().read();
-                points_info.total_points += points;
-                points_info.pending_points += points;
+                points_info += points;
                 self.points_info.at(version.into()).write(points_info);
             }
         }
