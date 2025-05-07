@@ -19,13 +19,13 @@ pub mod MemeCoinStaking {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             // TODO: create errors file and use it here
             assert!(get_caller_address() == self.owner.read(), "Can only be called by the owner");
-            self.rewards_contract.write(rewards_contract);
+            self.rewards_contract.write(value: rewards_contract);
             // TODO: emit event
         }
     }
 
     #[constructor]
     pub fn constructor(ref self: ContractState, owner: ContractAddress) {
-        self.owner.write(owner);
+        self.owner.write(value: owner);
     }
 }
