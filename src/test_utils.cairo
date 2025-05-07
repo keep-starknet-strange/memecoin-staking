@@ -1,5 +1,5 @@
-use starknet::{ContractAddress, Store};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
+use starknet::{ContractAddress, Store};
 
 pub struct TestCfg {
     pub owner: ContractAddress,
@@ -27,7 +27,9 @@ pub fn deploy_memecoin_staking_contract(owner: ContractAddress) -> ContractAddre
     contract_address
 }
 
-pub fn load_value<T, +Serde<T>, +Store<T>>(contract_address: ContractAddress, storage_address: felt252) -> T {
+pub fn load_value<T, +Serde<T>, +Store<T>>(
+    contract_address: ContractAddress, storage_address: felt252,
+) -> T {
     let size = Store::<T>::size().into();
     let mut loaded_value = load(target: contract_address, :storage_address, :size).span();
     Serde::deserialize(ref serialized: loaded_value).unwrap()
