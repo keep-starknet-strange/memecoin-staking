@@ -81,7 +81,7 @@ pub mod MemeCoinStaking {
                 id: stake_index,
                 version,
                 amount,
-                vesting_time: Time::now().add(duration.to_time_delta()),
+                vesting_time: Time::now().add(delta: duration.to_time_delta()),
             };
             self.stake_index.write(value: stake_index + 1);
             self
