@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
     use memecoin_staking::memecoin_staking::interface::{
-        IMemeCoinStaking, StakeDuration, StakeDurationTrait, StakeInfo,
+        IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
     };
     use memecoin_staking::types::{Amount, Index, Version};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -14,6 +14,12 @@ pub mod MemeCoinStaking {
 
     #[storage]
     struct Storage {
+        /// The owner of the contract.
+        /// The owner is responsible for setting,
+        /// and funding the rewards contract.
+        owner: ContractAddress,
+        /// The address of the rewards contract associated with the staking contract.
+        rewards_contract: ContractAddress,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
         /// Stores the total points for each version.
@@ -27,11 +33,24 @@ pub mod MemeCoinStaking {
     }
 
     #[constructor]
-    pub fn constructor(ref self: ContractState, token_address: ContractAddress) {
+    pub fn constructor(
+        ref self: ContractState, owner: ContractAddress, token_address: ContractAddress,
+    ) {
+        self.owner.write(value: owner);
         self.current_version.write(value: 0);
         self.stake_index.write(value: 1);
         self.token_dispatcher.write(value: IERC20Dispatcher { contract_address: token_address });
         self.points_info.push(value: 0);
+    }
+
+    #[abi(embed_v0)]
+    impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
+        fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
+            // TODO: create errors file and use it here
+            assert!(get_caller_address() == self.owner.read(), "Can only be called by the owner");
+            self.rewards_contract.write(value: rewards_contract);
+            // TODO: emit event
+        }
     }
 
     #[abi(embed_v0)]
@@ -96,3 +115,4 @@ pub mod MemeCoinStaking {
         }
     }
 }
+
