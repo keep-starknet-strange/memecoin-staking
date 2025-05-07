@@ -1,7 +1,7 @@
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
 };
-use memecoin_staking::test_utils::*;
+use memecoin_staking::test_utils::{TestCfg, deploy_memecoin_staking_contract, load_value};
 use starkware_utils::test_utils::cheat_caller_address_once;
 
 #[test]
