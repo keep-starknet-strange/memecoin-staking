@@ -1,4 +1,6 @@
+use memecoin_staking::types::{Amount, Index, Multiplier, Version};
 use starknet::ContractAddress;
+use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
 #[starknet::interface]
 pub trait IMemeCoinStakingConfig<TContractState> {
@@ -6,3 +8,57 @@ pub trait IMemeCoinStakingConfig<TContractState> {
     /// Only callable by the contract owner.
     fn set_rewards_contract(ref self: TContractState, rewards_contract: ContractAddress);
 }
+
+#[starknet::interface]
+pub trait IMemeCoinStaking<TContractState> {
+    /// Stakes the specified amount of meme coin for the specified duration.
+    /// Returns the stake id.
+    fn stake(ref self: TContractState, amount: Amount, duration: StakeDuration) -> Index;
+}
+
+/// Different stake durations.
+#[derive(starknet::Store, Drop, Hash, Serde, Copy)]
+pub enum StakeDuration {
+    #[default]
+    OneMonth,
+    ThreeMonths,
+    SixMonths,
+    TwelveMonths,
+}
+
+#[generate_trait]
+pub(crate) impl StakeDurationImpl of StakeDurationTrait {
+    /// Converts the stake duration to a time delta.
+    fn to_time_delta(self: @StakeDuration) -> TimeDelta {
+        match self {
+            StakeDuration::OneMonth => Time::days(30),
+            StakeDuration::ThreeMonths => Time::days(30 * 3),
+            StakeDuration::SixMonths => Time::days(30 * 6),
+            StakeDuration::TwelveMonths => Time::days(30 * 12),
+        }
+    }
+
+    /// Gets the points multiplier for the stake duration.
+    fn get_multiplier(self: @StakeDuration) -> Multiplier {
+        match self {
+            StakeDuration::OneMonth => 10,
+            StakeDuration::ThreeMonths => 12,
+            StakeDuration::SixMonths => 15,
+            StakeDuration::TwelveMonths => 20,
+        }
+    }
+}
+
+/// Stake info for each stake.
+#[derive(starknet::Store, Drop)]
+pub struct StakeInfo {
+    /// The stake id (unique to the contract, used for unstaking).
+    pub id: Index,
+    /// The version number.
+    pub version: Version,
+    /// The amount staked.
+    pub amount: Amount,
+    /// The vesting time (the time when rewards can be claimed for this stake).
+    pub vesting_time: Timestamp,
+}
+
