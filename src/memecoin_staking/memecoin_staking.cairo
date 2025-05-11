@@ -14,6 +14,11 @@ pub mod MemeCoinStaking {
         rewards_contract: ContractAddress,
     }
 
+    #[constructor]
+    pub fn constructor(ref self: ContractState, owner: ContractAddress) {
+        self.owner.write(value: owner);
+    }
+
     #[abi(embed_v0)]
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
@@ -22,10 +27,5 @@ pub mod MemeCoinStaking {
             self.rewards_contract.write(value: rewards_contract);
             // TODO: emit event
         }
-    }
-
-    #[constructor]
-    pub fn constructor(ref self: ContractState, owner: ContractAddress) {
-        self.owner.write(value: owner);
     }
 }
