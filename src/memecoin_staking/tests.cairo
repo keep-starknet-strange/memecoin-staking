@@ -11,6 +11,32 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use starkware_utils::test_utils::cheat_caller_address_once;
 
 #[test]
+fn test_constructor() {
+    let cfg: TestCfg = Default::default();
+    let contract_address = deploy_memecoin_staking_contract(
+        owner: cfg.owner, token_address: cfg.token_address,
+    );
+
+    let loaded_owner = load_value(:contract_address, storage_address: selector!("owner"));
+    assert!(loaded_owner == cfg.owner);
+
+    let loaded_stake_index = load_value::<
+        Index,
+    >(:contract_address, storage_address: selector!("stake_index"));
+    assert!(loaded_stake_index == 1);
+
+    let loaded_current_version = load_value::<
+        Version,
+    >(:contract_address, storage_address: selector!("current_version"));
+    assert!(loaded_current_version == 0);
+
+    let loaded_token_dispatcher = load_value::<
+        IERC20Dispatcher,
+    >(:contract_address, storage_address: selector!("token_dispatcher"));
+    assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
+}
+
+#[test]
 fn test_set_rewards_contract() {
     let cfg: TestCfg = Default::default();
     let contract_address = deploy_memecoin_staking_contract(
@@ -38,32 +64,6 @@ fn test_set_rewards_contract_wrong_caller() {
     let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address };
 
     dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
-}
-
-#[test]
-fn test_constructor() {
-    let cfg: TestCfg = Default::default();
-    let contract_address = deploy_memecoin_staking_contract(
-        owner: cfg.owner, token_address: cfg.token_address,
-    );
-
-    let loaded_owner = load_value(:contract_address, storage_address: selector!("owner"));
-    assert!(loaded_owner == cfg.owner);
-
-    let loaded_stake_index = load_value::<
-        Index,
-    >(:contract_address, storage_address: selector!("stake_index"));
-    assert!(loaded_stake_index == 1);
-
-    let loaded_current_version = load_value::<
-        Version,
-    >(:contract_address, storage_address: selector!("current_version"));
-    assert!(loaded_current_version == 0);
-
-    let loaded_token_dispatcher = load_value::<
-        IERC20Dispatcher,
-    >(:contract_address, storage_address: selector!("token_dispatcher"));
-    assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
 }
 
 #[test]
