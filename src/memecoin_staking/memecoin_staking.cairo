@@ -63,6 +63,7 @@ pub mod MemeCoinStaking {
             let stake_id = self
                 .stake_update_staker_info(:staker_address, :duration, :version, :amount);
             self.stake_update_points_info(:version, :points);
+            // TODO: Emit event.
             stake_id
         }
     }
