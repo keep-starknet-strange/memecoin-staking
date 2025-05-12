@@ -8,6 +8,7 @@ use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
 use starknet::{ContractAddress, Store};
 use starkware_utils::test_utils::cheat_caller_address_once;
 use starkware_utils::types::time::time::Time;
+
 pub struct TestCfg {
     pub owner: ContractAddress,
     pub rewards_contract: ContractAddress,
