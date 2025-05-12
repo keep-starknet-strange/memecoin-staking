@@ -17,6 +17,7 @@ build
 # misc
 .DS_Store
 *.pem
+*.bak
 
 # debug
 npm-debug.log*
@@ -38,6 +39,9 @@ yarn-error.log*
 .vscode
 
 .history
+
+# vimdiff
+*.orig
 
 # Vite
 **/vite.config.ts.timestamp-*
@@ -65,3 +69,4 @@ target
 .snfoundry_versioned_programs
 snfoundry_trace
 coverage_report
+
