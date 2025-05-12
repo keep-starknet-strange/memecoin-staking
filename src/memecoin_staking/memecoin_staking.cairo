@@ -46,10 +46,10 @@ pub mod MemeCoinStaking {
     #[abi(embed_v0)]
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
-            // TODO: create errors file and use it here
+            // TODO: Create errors file and use it here.
             assert!(get_caller_address() == self.owner.read(), "Can only be called by the owner");
             self.rewards_contract.write(value: rewards_contract);
-            // TODO: emit event
+            // TODO: Emit event.
         }
     }
 
@@ -110,4 +110,3 @@ pub mod MemeCoinStaking {
         }
     }
 }
-

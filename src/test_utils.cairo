@@ -81,4 +81,3 @@ pub fn approve_and_stake(
     );
     staking_dispatcher.stake(:amount, :duration)
 }
-
