@@ -14,6 +14,7 @@ use starkware_utils_testing::test_utils::cheat_caller_address_once;
 pub struct TestCfg {
     pub owner: ContractAddress,
     pub rewards_contract: ContractAddress,
+    pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
 }
@@ -23,6 +24,7 @@ impl TestInitConfigDefault of Default<TestCfg> {
         TestCfg {
             owner: 'OWNER'.try_into().unwrap(),
             rewards_contract: 'REWARDS_CONTRACT'.try_into().unwrap(),
+            staking_contract: 'STAKING_CONTRACT'.try_into().unwrap(),
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
         }
@@ -46,6 +48,22 @@ pub fn deploy_memecoin_staking_contract(
 
     let memecoin_staking_contract = declare(contract: "MemeCoinStaking").unwrap().contract_class();
     let (contract_address, _) = memecoin_staking_contract
+        .deploy(constructor_calldata: @calldata)
+        .unwrap();
+
+    contract_address
+}
+
+pub fn deploy_memecoin_rewards_contract(
+    owner: ContractAddress, staking_address: ContractAddress, token_address: ContractAddress,
+) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    owner.serialize(ref output: calldata);
+    staking_address.serialize(ref output: calldata);
+    token_address.serialize(ref output: calldata);
+
+    let memecoin_rewards_contract = declare(contract: "MemeCoinRewards").unwrap().contract_class();
+    let (contract_address, _) = memecoin_rewards_contract
         .deploy(constructor_calldata: @calldata)
         .unwrap();
 
