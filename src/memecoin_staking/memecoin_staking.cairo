@@ -90,7 +90,8 @@ pub mod MemeCoinStaking {
 
         fn new_version(ref self: ContractState) -> Amount {
             assert!(
-                self.caller_is_rewards_contract(), "Can only be called by the rewards contract",
+                get_caller_address() == self.rewards_contract.read(),
+                "Can only be called by the rewards contract",
             );
             let curr_version = self.current_version.read();
             let total_points = self.points_info.at(index: curr_version.into()).read();
@@ -157,12 +158,6 @@ pub mod MemeCoinStaking {
             token_dispatcher
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
-        }
-
-        fn caller_is_rewards_contract(self: @ContractState) -> bool {
-            let rewards_contract = self.rewards_contract.read();
-            let caller = get_caller_address();
-            rewards_contract == caller
         }
     }
 }
