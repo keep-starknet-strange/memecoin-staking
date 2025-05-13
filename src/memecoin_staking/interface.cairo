@@ -61,13 +61,13 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
 /// Iterator over all stake duration options.
 #[derive(Drop)]
 struct StakeDurationIter {
-    stake_duration: Option<StakeDuration>,
+    stake_duration: StakeDuration,
 }
 
 #[generate_trait]
 pub(crate) impl StakeDurationIterImpl of StakeDurationIterTrait {
     fn new() -> StakeDurationIter {
-        StakeDurationIter { stake_duration: Some(StakeDuration::OneMonth) }
+        StakeDurationIter { stake_duration: StakeDuration::OneMonth }
     }
 }
 
@@ -76,21 +76,18 @@ pub(crate) impl StakeDurationIteratorImpl of Iterator<StakeDurationIter> {
 
     fn next(ref self: StakeDurationIter) -> Option<StakeDuration> {
         let prev = self.stake_duration;
-        if let Some(duration) = self.stake_duration {
-            match duration {
-                StakeDuration::OneMonth => {
-                    self.stake_duration = Some(StakeDuration::ThreeMonths);
-                },
-                StakeDuration::ThreeMonths => {
-                    self.stake_duration = Some(StakeDuration::SixMonths);
-                },
-                StakeDuration::SixMonths => {
-                    self.stake_duration = Some(StakeDuration::TwelveMonths);
-                },
-                StakeDuration::TwelveMonths => { self.stake_duration = None; },
-            }
+        match self.stake_duration {
+            StakeDuration::OneMonth => { self.stake_duration = StakeDuration::ThreeMonths; },
+            StakeDuration::ThreeMonths => { self.stake_duration = StakeDuration::SixMonths; },
+            StakeDuration::SixMonths => { self.stake_duration = StakeDuration::TwelveMonths; },
+            StakeDuration::TwelveMonths => { self.stake_duration = StakeDuration::None; },
+            StakeDuration::None => (),
         }
-        prev
+        if prev == StakeDuration::None {
+            None
+        } else {
+            Some(prev)
+        }
     }
 }
 
@@ -116,5 +113,21 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         assert!(time_delta.is_some(), "Invalid stake duration");
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
         StakeInfo { id, version, amount, vesting_time }
+    }
+
+    fn get_id(self: @StakeInfo) -> Index {
+        *self.id
+    }
+
+    fn get_version(self: @StakeInfo) -> Version {
+        *self.version
+    }
+
+    fn get_amount(self: @StakeInfo) -> Amount {
+        *self.amount
+    }
+
+    fn get_vesting_time(self: @StakeInfo) -> Timestamp {
+        *self.vesting_time
     }
 }

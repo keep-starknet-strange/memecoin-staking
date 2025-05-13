@@ -1,6 +1,6 @@
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
-    StakeInfo,
+    StakeInfo, StakeInfoTrait,
 };
 use memecoin_staking::types::{Amount, Index, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -87,13 +87,14 @@ pub fn approve_and_stake(
 pub fn verify_stake_info(
     stake_info: @StakeInfo, id: Index, version: Version, amount: Amount, duration: StakeDuration,
 ) {
-    let lower_vesting_time_bound = Time::now().add(duration.to_time_delta() - Time::seconds(1));
-    let upper_vesting_time_bound = lower_vesting_time_bound.add(Time::seconds(1));
-    assert!(stake_info.id == @id);
-    assert!(stake_info.version == @version);
-    assert!(stake_info.amount == @amount);
-    assert!(stake_info.vesting_time >= @lower_vesting_time_bound);
-    assert!(stake_info.vesting_time <= @upper_vesting_time_bound);
+    let lower_vesting_time_bound = Time::now()
+        .add(delta: duration.to_time_delta().unwrap() - Time::seconds(count: 1));
+    let upper_vesting_time_bound = lower_vesting_time_bound.add(delta: Time::seconds(count: 1));
+    assert!(stake_info.get_id() == id);
+    assert!(stake_info.get_version() == version);
+    assert!(stake_info.get_amount() == amount);
+    assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
+    assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
 }
 
 pub fn stake_and_verify_stake_info(
@@ -107,10 +108,20 @@ pub fn stake_and_verify_stake_info(
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
     let stake_id = approve_and_stake(
-        @token_dispatcher, @staking_dispatcher, staker_address, amount, duration,
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        :staker_address,
+        :amount,
+        :duration,
     );
-    cheat_caller_address_once(contract_address, staker_address);
+    cheat_caller_address_once(:contract_address, caller_address: staker_address);
     let stake_info = staking_dispatcher.get_stake_info();
-    verify_stake_info(stake_info.at(stake_count.into()), stake_id, 0, amount, duration);
+    verify_stake_info(
+        stake_info: stake_info.at(index: stake_count.into()),
+        id: stake_id,
+        version: 0,
+        :amount,
+        :duration,
+    );
 }
 

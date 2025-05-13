@@ -108,32 +108,52 @@ fn test_get_stake_info() {
     let contract_address = deploy_memecoin_staking_contract(owner: cfg.owner, :token_address);
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address };
 
-    cheat_caller_address_once(token_address, cfg.staker_address);
+    cheat_caller_address_once(contract_address: token_address, caller_address: cfg.staker_address);
     let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 0);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
     stake_and_verify_stake_info(
-        contract_address, cfg.staker_address, token_address, amount, duration, 0,
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 0,
     );
 
     let amount: Amount = 500;
     let duration = StakeDuration::ThreeMonths;
     stake_and_verify_stake_info(
-        contract_address, cfg.staker_address, token_address, amount, duration, 1,
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 1,
     );
 
     let amount: Amount = 250;
     let duration = StakeDuration::SixMonths;
     stake_and_verify_stake_info(
-        contract_address, cfg.staker_address, token_address, amount, duration, 2,
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 2,
     );
 
     let amount: Amount = 125;
     let duration = StakeDuration::TwelveMonths;
     stake_and_verify_stake_info(
-        contract_address, cfg.staker_address, token_address, amount, duration, 3,
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 3,
     );
 }
 

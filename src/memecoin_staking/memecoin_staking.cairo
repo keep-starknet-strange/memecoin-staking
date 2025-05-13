@@ -79,9 +79,9 @@ pub mod MemeCoinStaking {
             let mut result = array![];
             let staker_info = self.staker_info.entry(staker_address);
             for duration in StakeDurationIterTrait::new() {
-                let staker_info = staker_info.entry(duration);
-                for i in 0..staker_info.len() {
-                    result.append(staker_info.at(i).read());
+                let stakes = staker_info.stake_info.entry(duration);
+                for i in 0..stakes.len() {
+                    result.append(stakes.at(i).read());
                 }
             }
             result.span()
