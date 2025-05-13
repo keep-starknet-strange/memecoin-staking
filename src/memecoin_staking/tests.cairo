@@ -1,14 +1,14 @@
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
-    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
 };
 use memecoin_staking::test_utils::{
     *, TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
     load_value, stake_and_verify_stake_info,
 };
-use memecoin_staking::types::{Amount, Index, Version};
+use memecoin_staking::types::{Amount, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use starkware_utils::test_utils::cheat_caller_address_once;
+use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_constructor() {
@@ -112,6 +112,7 @@ fn test_get_stake_info() {
     let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 0);
 
+    let version = 0;
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
     stake_and_verify_stake_info(
@@ -120,7 +121,7 @@ fn test_get_stake_info() {
         :token_address,
         :amount,
         :duration,
-        stake_count: 0,
+        :version,
     );
 
     let amount: Amount = 500;
@@ -131,7 +132,7 @@ fn test_get_stake_info() {
         :token_address,
         :amount,
         :duration,
-        stake_count: 1,
+        :version,
     );
 
     let amount: Amount = 250;
@@ -142,7 +143,7 @@ fn test_get_stake_info() {
         :token_address,
         :amount,
         :duration,
-        stake_count: 2,
+        :version,
     );
 
     let amount: Amount = 125;
@@ -153,7 +154,7 @@ fn test_get_stake_info() {
         :token_address,
         :amount,
         :duration,
-        stake_count: 3,
+        :version,
     );
 }
 
@@ -195,57 +196,71 @@ fn test_stake_insufficient_balance() {
 #[test]
 #[should_panic(expected: "Can't close version with no stakes")]
 fn test_new_version_no_stakes() {
-    let cfg: TestCfg = Default::default();
-    let token_dispatcher = deploy_mock_erc20_contract(2000, cfg.staker_address);
-    let staking_dispatcher = deploy_memecoin_staking_contract(
-        cfg.owner, token_dispatcher.contract_address,
+    let mut cfg: TestCfg = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: 2000, recipient: cfg.staker_address,
     );
+    cfg.token_address = token_address;
+    let staking_address = deploy_memecoin_staking_contract(
+        owner: cfg.owner, token_address: cfg.token_address,
+    );
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: staking_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: staking_address };
 
-    cheat_caller_address_once(staking_dispatcher.contract_address, cfg.owner);
-    staking_dispatcher.set_rewards_contract(cfg.rewards_contract);
+    cheat_caller_address_once(contract_address: staking_address, caller_address: cfg.owner);
+    config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
 
-    cheat_caller_address_once(staking_dispatcher.contract_address, cfg.rewards_contract);
+    cheat_caller_address_once(
+        contract_address: staking_address, caller_address: cfg.rewards_contract,
+    );
     staking_dispatcher.new_version();
 }
 
 #[test]
 fn test_new_version() {
-    let cfg: TestCfg = Default::default();
-    let token_dispatcher = deploy_mock_erc20_contract(2000, cfg.staker_address);
-    let staking_dispatcher = deploy_memecoin_staking_contract(
-        cfg.owner, token_dispatcher.contract_address,
+    let mut cfg: TestCfg = Default::default();
+    let token_address = deploy_mock_erc20_contract(
+        initial_supply: 2000, recipient: cfg.staker_address,
     );
+    cfg.token_address = token_address;
+    let staking_address = deploy_memecoin_staking_contract(
+        owner: cfg.owner, token_address: cfg.token_address,
+    );
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: staking_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: staking_address };
 
-    cheat_caller_address_once(staking_dispatcher.contract_address, cfg.owner);
-    staking_dispatcher.set_rewards_contract(cfg.rewards_contract);
+    cheat_caller_address_once(contract_address: staking_address, caller_address: cfg.owner);
+    config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
 
+    let mut version = 0;
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
     stake_and_verify_stake_info(
-        staking_dispatcher.contract_address,
-        cfg.staker_address,
-        token_dispatcher.contract_address,
-        amount,
-        duration,
-        0,
+        contract_address: staking_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        :version,
     );
 
     cheat_caller_address_once(staking_dispatcher.contract_address, cfg.rewards_contract);
     let total_points = staking_dispatcher.new_version();
-    assert!(total_points == amount * duration.get_multiplier().into());
+    version += 1;
+    assert!(total_points == amount * duration.get_multiplier().unwrap().into());
 
     let amount: Amount = 1000;
     let duration = StakeDuration::ThreeMonths;
     stake_and_verify_stake_info(
-        staking_dispatcher.contract_address,
-        cfg.staker_address,
-        token_dispatcher.contract_address,
-        amount,
-        duration,
-        1,
+        contract_address: staking_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        :version,
     );
 
     cheat_caller_address_once(staking_dispatcher.contract_address, cfg.rewards_contract);
     let total_points = staking_dispatcher.new_version();
-    assert!(total_points == amount * duration.get_multiplier().into());
+    assert!(total_points == amount * duration.get_multiplier().unwrap().into());
 }
