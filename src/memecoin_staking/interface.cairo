@@ -2,6 +2,8 @@ use memecoin_staking::types::{Amount, Index, Multiplier, Version};
 use starknet::ContractAddress;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
+const ONE_MONTH: u8 = 30;
+
 #[starknet::interface]
 pub trait IMemeCoinStakingConfig<TContractState> {
     /// Sets the rewards contract address.
@@ -23,6 +25,7 @@ pub trait IMemeCoinStaking<TContractState> {
 #[derive(starknet::Store, Drop, Hash, Serde, Copy, PartialEq)]
 pub enum StakeDuration {
     #[default]
+    None,
     OneMonth,
     ThreeMonths,
     SixMonths,
@@ -32,22 +35,25 @@ pub enum StakeDuration {
 #[generate_trait]
 pub(crate) impl StakeDurationImpl of StakeDurationTrait {
     /// Converts the stake duration to a time delta.
-    fn to_time_delta(self: @StakeDuration) -> TimeDelta {
+    fn to_time_delta(self: @StakeDuration) -> Option<TimeDelta> {
         match self {
-            StakeDuration::OneMonth => Time::days(30),
-            StakeDuration::ThreeMonths => Time::days(30 * 3),
-            StakeDuration::SixMonths => Time::days(30 * 6),
-            StakeDuration::TwelveMonths => Time::days(30 * 12),
+            StakeDuration::None => None,
+            StakeDuration::OneMonth => Some(Time::days(ONE_MONTH.into())),
+            StakeDuration::ThreeMonths => Some(Time::days(ONE_MONTH.into() * 3)),
+            StakeDuration::SixMonths => Some(Time::days(ONE_MONTH.into() * 6)),
+            StakeDuration::TwelveMonths => Some(Time::days(ONE_MONTH.into() * 12)),
         }
     }
 
     /// Gets the points multiplier for the stake duration.
-    fn get_multiplier(self: @StakeDuration) -> Multiplier {
+    fn get_multiplier(self: @StakeDuration) -> Option<Multiplier> {
+        // TODO: Allow user to configure the multiplier for each stake duration.
         match self {
-            StakeDuration::OneMonth => 10,
-            StakeDuration::ThreeMonths => 12,
-            StakeDuration::SixMonths => 15,
-            StakeDuration::TwelveMonths => 20,
+            StakeDuration::None => None,
+            StakeDuration::OneMonth => Some(10),
+            StakeDuration::ThreeMonths => Some(12),
+            StakeDuration::SixMonths => Some(15),
+            StakeDuration::TwelveMonths => Some(20),
         }
     }
 }
@@ -92,12 +98,23 @@ pub(crate) impl StakeDurationIteratorImpl of Iterator<StakeDurationIter> {
 #[derive(starknet::Store, Drop, Serde)]
 pub struct StakeInfo {
     /// The stake id (unique to the contract, used for unstaking).
-    pub id: Index,
+    id: Index,
     /// The version number.
-    pub version: Version,
+    /// Stakes in the same version share a points / rewards ratio,
+    /// set according to the amount of rewards funded by the owner.
+    version: Version,
     /// The amount staked.
-    pub amount: Amount,
+    amount: Amount,
     /// The vesting time (the time when rewards can be claimed for this stake).
-    pub vesting_time: Timestamp,
+    vesting_time: Timestamp,
 }
 
+#[generate_trait]
+pub(crate) impl StakeInfoImpl of StakeInfoTrait {
+    fn new(id: Index, version: Version, amount: Amount, duration: StakeDuration) -> StakeInfo {
+        let time_delta = duration.to_time_delta();
+        assert!(time_delta.is_some(), "Invalid stake duration");
+        let vesting_time = Time::now().add(delta: time_delta.unwrap());
+        StakeInfo { id, version, amount, vesting_time }
+    }
+}

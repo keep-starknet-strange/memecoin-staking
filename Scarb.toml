@@ -16,7 +16,7 @@ assert_macros = "2.11.0"
 openzeppelin = "1.0.0"
 
 [[test]]
-name = "contracts_unittest"
+name = "memecoin_staking_unittest"
 build-external-contracts = ["starkware_utils::erc20_mocks::DualCaseERC20Mock"]
 
 [[target.starknet-contract]]
