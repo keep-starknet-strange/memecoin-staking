@@ -98,7 +98,8 @@ pub fn verify_stake_info(
     stake_info: @StakeInfo, id: Index, version: Version, amount: Amount, duration: StakeDuration,
 ) {
     let upper_vesting_time_bound = Time::now().add(delta: duration.to_time_delta().unwrap());
-    let lower_vesting_time_bound = upper_vesting_time_bound.sub_delta(Time::seconds(count: 1));
+    let lower_vesting_time_bound = upper_vesting_time_bound
+        .sub_delta(other: Time::seconds(count: 1));
     assert!(stake_info.get_id() == id);
     assert!(stake_info.get_version() == version);
     assert!(stake_info.get_amount() == amount);
@@ -136,8 +137,8 @@ pub fn stake_and_verify_stake_info(
 
 pub fn find_stake_by_id(stake_info: @Span<StakeInfo>, id: Index) -> Option<@StakeInfo> {
     for i in 0..stake_info.len() {
-        if stake_info.at(i).get_id() == id {
-            return Some(stake_info.at(i));
+        if stake_info.at(index: i).get_id() == id {
+            return Some(stake_info.at(index: i));
         }
     }
     None
