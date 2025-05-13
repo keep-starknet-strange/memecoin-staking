@@ -4,7 +4,9 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
+use snforge_std::{
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
+};
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
@@ -101,4 +103,41 @@ pub fn verify_stake_info(
     assert!(stake_info.get_amount() == amount);
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
+}
+
+pub fn stake_and_verify_stake_info(
+    contract_address: ContractAddress,
+    staker_address: ContractAddress,
+    token_address: ContractAddress,
+    amount: Amount,
+    duration: StakeDuration,
+    stake_count: u8,
+) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
+    let stake_id = approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        :staker_address,
+        :amount,
+        :duration,
+    );
+    cheat_caller_address_once(:contract_address, caller_address: staker_address);
+    let stake_info = staking_dispatcher.get_stake_info();
+    verify_stake_info(
+        stake_info: stake_info.at(index: stake_count.into()),
+        id: stake_id,
+        version: 0,
+        :amount,
+        :duration,
+    );
+}
+
+pub fn find_stake_by_id(stake_info: @Span<StakeInfo>, id: Index) -> Option<@StakeInfo> {
+    for i in 0..stake_info.len() {
+        if stake_info.at(i).get_id() == id {
+            return Some(stake_info.at(i));
+        }
+    }
+    None
 }
