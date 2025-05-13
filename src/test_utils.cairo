@@ -1,4 +1,5 @@
 use memecoin_staking::memecoin_staking::interface::{
+    IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
     StakeInfo, StakeInfoTrait,
 };
@@ -11,6 +12,7 @@ use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
+#[derive(Drop)]
 pub struct TestCfg {
     pub owner: ContractAddress,
     pub rewards_contract: ContractAddress,
@@ -85,6 +87,32 @@ pub fn deploy_mock_erc20_contract(
     let (contract_address, _) = erc20_contract.deploy(constructor_calldata: @calldata).unwrap();
 
     contract_address
+}
+
+pub fn deploy_all_contracts(
+    ref cfg: TestCfg, owner_supply: u256, staker_supply: u256,
+) -> (ContractAddress, ContractAddress, ContractAddress) {
+    let initial_supply = owner_supply + staker_supply;
+    cfg.token_address = deploy_mock_erc20_contract(:initial_supply, recipient: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    IERC20Dispatcher { contract_address: cfg.token_address }
+        .transfer(recipient: cfg.staker_address, amount: staker_supply.into());
+
+    cfg
+        .staking_contract =
+            deploy_memecoin_staking_contract(owner: cfg.owner, token_address: cfg.token_address);
+    cfg
+        .rewards_contract =
+            deploy_memecoin_rewards_contract(
+                owner: cfg.owner,
+                staking_address: cfg.staking_contract,
+                token_address: cfg.token_address,
+            );
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract }
+        .set_rewards_contract(rewards_contract: cfg.rewards_contract);
+
+    (cfg.token_address, cfg.staking_contract, cfg.rewards_contract)
 }
 
 pub fn load_value<T, +Serde<T>, +Store<T>>(
