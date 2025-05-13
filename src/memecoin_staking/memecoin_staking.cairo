@@ -2,6 +2,7 @@
 pub mod MemeCoinStaking {
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
+        StakeInfoImpl,
     };
     use memecoin_staking::types::{Amount, Index, Version};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -10,7 +11,7 @@ pub mod MemeCoinStaking {
         Vec,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use starkware_utils::types::time::time::Time;
+    use starkware_utils::utils::AddToStorage;
 
     #[storage]
     struct Storage {
@@ -21,15 +22,21 @@ pub mod MemeCoinStaking {
         /// The address of the rewards contract associated with the staking contract.
         rewards_contract: ContractAddress,
         /// Stores the stake info per stake for each staker.
-        staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
+        staker_info: Map<ContractAddress, StakerInfo>,
         /// Stores the total points for each version.
-        points_info: Vec<Amount>,
+        points_info: Vec<u128>,
         /// The current version number.
         current_version: Version,
-        /// The index of the next stake.
-        stake_index: Index,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
+    }
+
+    #[starknet::storage_node]
+    struct StakerInfo {
+        /// The running index for the stake IDs.
+        stake_index: Index,
+        /// The stake info for each stake duration.
+        stake_info: Map<StakeDuration, Vec<StakeInfo>>,
     }
 
     #[constructor]
@@ -38,7 +45,6 @@ pub mod MemeCoinStaking {
     ) {
         self.owner.write(value: owner);
         self.current_version.write(value: 0);
-        self.stake_index.write(value: 1);
         self.token_dispatcher.write(value: IERC20Dispatcher { contract_address: token_address });
         self.points_info.push(value: 0);
     }
@@ -58,11 +64,12 @@ pub mod MemeCoinStaking {
         fn stake(ref self: ContractState, amount: Amount, duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
             let version = self.current_version.read();
-            let points = amount * duration.get_multiplier().into();
-            self.transfer_from_caller_to_contract(:amount);
-            let stake_id = self
-                .stake_update_staker_info(:staker_address, :duration, :version, :amount);
-            self.stake_update_points_info(:version, :points);
+            let multiplier = duration.get_multiplier();
+            assert!(multiplier.is_some(), "Invalid stake duration");
+            let points = amount * multiplier.unwrap().into();
+            let stake_id = self.update_staker_info(:staker_address, :duration, :version, :amount);
+            self.update_points_info(:version, :points);
+            self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
             stake_id
         }
@@ -70,43 +77,50 @@ pub mod MemeCoinStaking {
 
     #[generate_trait]
     impl InternalMemeCoinStakingImpl of InternalMemeCoinStakingTrait {
-        fn stake_update_staker_info(
+        fn update_staker_info(
             ref self: ContractState,
             staker_address: ContractAddress,
             duration: StakeDuration,
             version: Version,
             amount: Amount,
         ) -> Index {
-            let stake_index = self.stake_index.read();
-            let stake_info = StakeInfo {
-                id: stake_index,
-                version,
-                amount,
-                vesting_time: Time::now().add(delta: duration.to_time_delta()),
-            };
-            self.stake_index.write(value: stake_index + 1);
-            self
-                .staker_info
-                .entry(key: staker_address)
-                .entry(key: duration)
-                .push(value: stake_info);
+            let mut stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
+            // The index should start at 1, as unstaking index 0 is reserved for unstaking all.
+            if stake_index == 0 {
+                // TODO: Maybe emit event for first stake.
+                stake_index = 1;
+                self.staker_info.entry(key: staker_address).stake_index.write(value: stake_index);
+            }
+            let stake_info = StakeInfoImpl::new(id: stake_index, :version, :amount, :duration);
+            self.staker_info.entry(key: staker_address).stake_index.add_and_write(value: 1);
+            self.push_stake_info(:staker_address, :duration, :stake_info);
             stake_index
         }
 
-        fn stake_update_points_info(ref self: ContractState, version: Version, points: Amount) {
-            let mut points_info: Amount = self.points_info.at(index: version.into()).read();
-            points_info += points;
-            self.points_info.at(index: version.into()).write(value: points_info);
+        fn push_stake_info(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            duration: StakeDuration,
+            stake_info: StakeInfo,
+        ) {
+            self
+                .staker_info
+                .entry(key: staker_address)
+                .stake_info
+                .entry(key: duration)
+                .push(value: stake_info);
         }
 
-        fn transfer_from_caller_to_contract(ref self: ContractState, amount: Amount) {
-            let caller_address = get_caller_address();
+        fn update_points_info(ref self: ContractState, version: Version, points: Amount) {
+            self.points_info.at(index: version.into()).add_and_write(value: points);
+        }
+
+        fn transfer_to_contract(ref self: ContractState, sender: ContractAddress, amount: Amount) {
             let contract_address = get_contract_address();
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher
-                .transfer_from(
-                    sender: caller_address, recipient: contract_address, amount: amount.into(),
-                );
+                .transfer_from(:sender, recipient: contract_address, amount: amount.into());
+            // TODO: Maybe emit event.
         }
     }
 }
