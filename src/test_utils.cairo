@@ -4,7 +4,9 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
+use snforge_std::{
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
+};
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
@@ -30,6 +32,14 @@ impl TestInitConfigDefault of Default<TestCfg> {
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
         }
     }
+}
+
+pub fn cheat_caller_address_many(
+    contract_address: ContractAddress, caller_address: ContractAddress, count: u8,
+) {
+    cheat_caller_address(
+        :contract_address, :caller_address, span: CheatSpan::TargetCalls(count.into()),
+    );
 }
 
 pub fn deploy_memecoin_staking_contract(ref cfg: TestCfg) -> ContractAddress {
