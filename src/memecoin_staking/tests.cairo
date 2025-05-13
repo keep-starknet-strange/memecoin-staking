@@ -3,7 +3,7 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
 };
 use memecoin_staking::test_utils::{
-    *, TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
+    TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
     load_value, stake_and_verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Version};
