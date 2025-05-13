@@ -236,7 +236,9 @@ fn test_new_version() {
         :version,
     );
 
-    cheat_caller_address_once(staking_dispatcher.contract_address, cfg.rewards_contract);
+    cheat_caller_address_once(
+        contract_address: staking_address, caller_address: cfg.rewards_contract,
+    );
     let total_points = staking_dispatcher.new_version();
     version += 1;
     assert!(total_points == amount * duration.get_multiplier().unwrap().into());
@@ -252,7 +254,9 @@ fn test_new_version() {
         :version,
     );
 
-    cheat_caller_address_once(staking_dispatcher.contract_address, cfg.rewards_contract);
+    cheat_caller_address_once(
+        contract_address: staking_address, caller_address: cfg.rewards_contract,
+    );
     let total_points = staking_dispatcher.new_version();
     assert!(total_points == amount * duration.get_multiplier().unwrap().into());
 }
