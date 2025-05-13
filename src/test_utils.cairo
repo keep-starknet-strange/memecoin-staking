@@ -135,8 +135,8 @@ pub fn stake_and_verify_stake_info(
 
 pub fn find_stake_by_id(stake_info: @Span<StakeInfo>, id: Index) -> Option<@StakeInfo> {
     for i in 0..stake_info.len() {
-        if stake_info.at(i).get_id() == id {
-            return Some(stake_info.at(i));
+        if stake_info.at(index: i).get_id() == id {
+            return Some(stake_info.at(index: i));
         }
     }
     None
