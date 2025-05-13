@@ -96,6 +96,10 @@ pub mod MemeCoinStaking {
             assert!(total_points > 0, "Can't close version with no stakes");
             self.current_version.add_and_write(value: 1);
             self.points_info.push(value: 0);
+            assert!(
+                self.points_info.len() == self.current_version.read().into() + 1,
+                "Invalid points info length",
+            );
             total_points
         }
     }
