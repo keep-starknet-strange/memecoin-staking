@@ -348,6 +348,11 @@ fn test_query_points() {
     let staking_dispatcher = IMemeCoinStakingDispatcher {
         contract_address: staking_contract_address,
     };
+    cheat_caller_address_once(
+        contract_address: staking_contract_address, caller_address: cfg.owner,
+    );
+    IMemeCoinStakingConfigDispatcher { contract_address: staking_contract_address }
+        .set_rewards_contract(rewards_contract: cfg.rewards_contract);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
@@ -366,6 +371,12 @@ fn test_query_points() {
     let points_info = staking_dispatcher.query_points(version: 0);
     assert!(points_info == points);
 
+    cheat_caller_address_once(
+        contract_address: staking_contract_address, caller_address: cfg.rewards_contract,
+    );
+    let total_points = staking_dispatcher.new_version();
+    assert!(total_points == points);
+
     let amount: Amount = 2000;
     let duration = StakeDuration::ThreeMonths;
     approve_and_stake(
@@ -376,12 +387,18 @@ fn test_query_points() {
         :duration,
     );
 
-    points += amount * duration.get_multiplier().unwrap().into();
+    let new_version_points = amount * duration.get_multiplier().unwrap().into();
     cheat_caller_address_once(
         contract_address: staking_contract_address, caller_address: cfg.owner,
     );
     let points_info = staking_dispatcher.query_points(version: 0);
     assert!(points_info == points);
+
+    cheat_caller_address_once(
+        contract_address: staking_contract_address, caller_address: cfg.owner,
+    );
+    let points_info = staking_dispatcher.query_points(version: 1);
+    assert!(points_info == new_version_points);
 }
 
 #[test]
