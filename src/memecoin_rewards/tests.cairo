@@ -60,3 +60,39 @@ fn test_fund() {
     );
     assert!(loaded_version == 1);
 }
+
+#[test]
+#[should_panic(expected: "Can only be called by the owner")]
+fn test_fund_wrong_caller() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    let amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staker_address,
+    );
+    rewards_dispatcher.fund(amount: amount);
+}
+
+#[test]
+#[should_panic(expected: "Can't close version with no stakes")]
+fn test_fund_no_points() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.owner);
+    rewards_dispatcher.fund(amount: 1000);
+}
