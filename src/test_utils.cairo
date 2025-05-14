@@ -24,6 +24,7 @@ pub struct TestCfg {
     pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
+    pub second_staker_address: ContractAddress,
 }
 
 impl TestInitConfigDefault of Default<TestCfg> {
@@ -34,6 +35,7 @@ impl TestInitConfigDefault of Default<TestCfg> {
             staking_contract: 'STAKING_CONTRACT'.try_into().unwrap(),
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
+            second_staker_address: 'SECOND_STAKER_ADDRESS'.try_into().unwrap(),
         }
     }
 }

@@ -3,11 +3,13 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
 };
 use memecoin_staking::test_utils::{
-    INITIAL_SUPPLY, TestCfg, approve_and_stake, deploy_memecoin_staking_contract,
-    deploy_mock_erc20_contract, load_value, stake_and_verify_stake_info,
+    INITIAL_SUPPLY, TestCfg, approve_and_fund, approve_and_stake, deploy_all_contracts,
+    deploy_memecoin_staking_contract, deploy_mock_erc20_contract, get_all_dispatchers, load_value,
+    stake_and_verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use starkware_utils::math::utils::mul_wide_and_floor_div;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
@@ -255,4 +257,92 @@ fn test_new_version() {
     );
     let total_points = staking_dispatcher.new_version();
     assert!(total_points == amount * duration.get_multiplier().unwrap().into());
+}
+
+#[test]
+fn test_query_rewards_sanity() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    let (token_dispatcher, staking_dispatcher, _) = get_all_dispatchers(cfg: @cfg);
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let fund_amount: Amount = 1000;
+    approve_and_fund(cfg: @cfg, amount: fund_amount);
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.query_rewards();
+    assert!(rewards == fund_amount);
+}
+
+#[test]
+fn test_query_rewards() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    let (token_dispatcher, staking_dispatcher, _) = get_all_dispatchers(cfg: @cfg);
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let fund_amount: Amount = 1000;
+    approve_and_fund(cfg: @cfg, amount: fund_amount);
+    let original_rewards = fund_amount;
+
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    token_dispatcher.transfer(recipient: cfg.second_staker_address, amount: 5000);
+    let mut total_points: u128 = 0;
+    let mut staker_points: u128 = 0;
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::ThreeMonths;
+    staker_points += amount * duration.get_multiplier().unwrap().into();
+    total_points += staker_points;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::SixMonths;
+    total_points += amount * duration.get_multiplier().unwrap().into();
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.second_staker_address,
+        :amount,
+        :duration,
+    );
+
+    let fund_amount: Amount = 10000;
+    approve_and_fund(cfg: @cfg, amount: fund_amount);
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.query_rewards();
+    let calculated_rewards = mul_wide_and_floor_div(
+        lhs: staker_points, rhs: fund_amount, div: total_points,
+    )
+        .unwrap();
+    assert!(rewards == calculated_rewards + original_rewards);
 }
