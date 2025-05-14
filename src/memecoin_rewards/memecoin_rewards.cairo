@@ -4,12 +4,13 @@ pub mod MemeCoinRewards {
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait,
     };
-    use memecoin_staking::types::Amount;
+    use memecoin_staking::types::{Amount, Version};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
-        MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
+        MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starkware_utils::math::utils::mul_wide_and_floor_div;
 
     #[storage]
     struct Storage {
@@ -62,6 +63,30 @@ pub mod MemeCoinRewards {
                     sender: owner, recipient: get_contract_address(), amount: amount.into(),
                 );
             // TODO: Emit event.
+        }
+
+        fn query_rewards(
+            self: @ContractState, points_per_version: Span<(Version, u128)>,
+        ) -> Amount {
+            assert!(
+                get_caller_address() == self.staking_dispatcher.read().contract_address,
+                "Can only be called by the staking contract",
+            );
+            let mut total_rewards = 0;
+            for (version, points) in points_per_version {
+                assert!((*version).into() <= self.version_info.len(), "Invalid version");
+                if let Some(version_info) = self.version_info.get(index: (*version).into()) {
+                    assert!(*points <= version_info.total_points.read(), "Invalid amount of points");
+                    total_rewards +=
+                        mul_wide_and_floor_div(
+                            lhs: *points,
+                            rhs: version_info.total_rewards.read(),
+                            div: version_info.total_points.read(),
+                        )
+                        .unwrap();
+                }
+            }
+            total_rewards
         }
     }
 }
