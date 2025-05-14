@@ -1,5 +1,9 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
+    use core::dict::{Felt252Dict, Felt252DictTrait};
+    use memecoin_staking::memecoin_rewards::interface::{
+        IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
+    };
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationIterTrait,
         StakeDurationTrait, StakeInfo, StakeInfoImpl,
@@ -103,6 +107,19 @@ pub mod MemeCoinStaking {
             );
             total_points
         }
+
+        fn query_rewards(self: @ContractState) -> Amount {
+            let staker_address = get_caller_address();
+            let mut points_per_version: Felt252Dict<u128> = Default::default();
+            for duration in StakeDurationIterTrait::new() {
+                self.accumulate_points(:staker_address, :duration, ref :points_per_version);
+            }
+            let rewards_dispatcher = IMemeCoinRewardsDispatcher {
+                contract_address: self.rewards_contract.read(),
+            };
+            let span = self.points_per_version_dict_to_span(ref dict: points_per_version);
+            rewards_dispatcher.query_rewards(points_per_version: span)
+        }
     }
 
     #[generate_trait]
@@ -151,6 +168,37 @@ pub mod MemeCoinStaking {
             token_dispatcher
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
+        }
+
+        fn points_per_version_dict_to_span(
+            self: @ContractState, ref dict: Felt252Dict<u128>,
+        ) -> Span<(Version, u128)> {
+            let mut result = array![];
+            for version in 0..self.current_version.read() {
+                result.append(value: (version, dict.get(key: version.into())));
+            }
+            result.span()
+        }
+
+        fn accumulate_points(
+            self: @ContractState,
+            staker_address: ContractAddress,
+            duration: StakeDuration,
+            ref points_per_version: Felt252Dict<u128>,
+        ) {
+            let stakes = self
+                .staker_info
+                .entry(key: staker_address)
+                .stake_info
+                .entry(key: duration);
+            let multiplier = duration.get_multiplier().unwrap().into();
+            for i in 0..stakes.len() {
+                let stake = stakes.at(index: i).read();
+                let version = stake.get_version();
+                let stake_points = stake.get_amount() * multiplier;
+                let curr_points = points_per_version.get(key: version.into());
+                points_per_version.insert(key: version.into(), value: curr_points + stake_points);
+            }
         }
     }
 }
