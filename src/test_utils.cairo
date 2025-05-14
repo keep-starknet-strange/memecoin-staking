@@ -1,3 +1,6 @@
+use memecoin_staking::memecoin_rewards::interface::{
+    IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
+};
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
@@ -179,4 +182,25 @@ pub fn calculate_points(amount: Amount, stake_duration: StakeDuration) -> u128 {
     let points = amount * multiplier.into();
 
     points
+}
+
+pub fn get_all_dispatchers(
+    cfg: @TestCfg,
+) -> (IERC20Dispatcher, IMemeCoinStakingDispatcher, IMemeCoinRewardsDispatcher) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: *cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: *cfg.rewards_contract };
+    (token_dispatcher, staking_dispatcher, rewards_dispatcher)
+}
+
+pub fn approve_and_fund(cfg: @TestCfg, amount: Amount) {
+    let (token_dispatcher, _, rewards_dispatcher) = get_all_dispatchers(cfg: cfg);
+    cheat_caller_address_once(
+        contract_address: token_dispatcher.contract_address, caller_address: *cfg.owner,
+    );
+    token_dispatcher.approve(spender: rewards_dispatcher.contract_address, amount: amount.into());
+    cheat_caller_address_once(
+        contract_address: rewards_dispatcher.contract_address, caller_address: *cfg.owner,
+    );
+    rewards_dispatcher.fund(amount: amount);
 }

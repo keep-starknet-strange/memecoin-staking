@@ -76,7 +76,9 @@ pub mod MemeCoinRewards {
             for (version, points) in points_per_version {
                 assert!((*version).into() <= self.version_info.len(), "Invalid version");
                 if let Some(version_info) = self.version_info.get(index: (*version).into()) {
-                    assert!(*points <= version_info.total_points.read(), "Invalid amount of points");
+                    assert!(
+                        *points <= version_info.total_points.read(), "Invalid amount of points",
+                    );
                     total_rewards +=
                         mul_wide_and_floor_div(
                             lhs: *points,
