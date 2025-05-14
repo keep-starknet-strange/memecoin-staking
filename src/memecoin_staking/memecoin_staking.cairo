@@ -77,11 +77,11 @@ pub mod MemeCoinStaking {
         fn get_stake_info(self: @ContractState) -> Span<StakeInfo> {
             let staker_address = get_caller_address();
             let mut result = array![];
-            let staker_info = self.staker_info.entry(staker_address);
+            let staker_info = self.staker_info.entry(key: staker_address);
             for duration in StakeDurationIterTrait::new() {
-                let stakes = staker_info.stake_info.entry(duration);
+                let stakes = staker_info.stake_info.entry(key: duration);
                 for i in 0..stakes.len() {
-                    result.append(stakes.at(i).read());
+                    result.append(value: stakes.at(index: i).read());
                 }
             }
             result.span()
