@@ -53,7 +53,7 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             // TODO: Create errors file and use it here.
-            assert!(get_caller_address() == self.owner.read(), "Can only be called by the owner");
+            assert!(self.caller_is_owner(), "Can only be called by the owner");
             self.rewards_contract.write(value: rewards_contract);
             // TODO: Emit event.
         }
@@ -103,6 +103,12 @@ pub mod MemeCoinStaking {
             );
             total_points
         }
+
+        fn query_points(self: @ContractState, version: Version) -> u128 {
+            assert!(self.caller_is_owner(), "Only callable by the owner");
+            assert!(version <= self.current_version.read(), "Version number is too high");
+            self.points_info.at(version.into()).read()
+        }
     }
 
     #[generate_trait]
@@ -151,6 +157,10 @@ pub mod MemeCoinStaking {
             token_dispatcher
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
+        }
+
+        fn caller_is_owner(self: @ContractState) -> bool {
+            get_caller_address() == self.owner.read()
         }
     }
 }
