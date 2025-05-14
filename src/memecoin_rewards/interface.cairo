@@ -1,4 +1,4 @@
-use memecoin_staking::types::Amount;
+use memecoin_staking::types::{Amount, Version};
 
 #[starknet::interface]
 pub trait IMemeCoinRewards<TContractState> {
@@ -8,4 +8,8 @@ pub trait IMemeCoinRewards<TContractState> {
     /// Can only be called by the owner of the contract.
     /// Will fail if there are no stakes for the current version.
     fn fund(ref self: TContractState, amount: Amount);
+
+    /// Query this contract for the expected rewards given a list of points per version.
+    /// Can only be called by the staking contract.
+    fn query_rewards(self: @TContractState, points_per_version: Span<(Version, u128)>) -> Amount;
 }
