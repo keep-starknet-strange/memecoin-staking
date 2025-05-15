@@ -68,13 +68,12 @@ pub fn deploy_mock_erc20_contract(owner: ContractAddress) -> ContractAddress {
 }
 
 pub fn deploy_all_contracts(
-    ref cfg: TestCfg, owner_supply: u256, staker_supply: u256,
+    ref cfg: TestCfg,
 ) -> (ContractAddress, ContractAddress, ContractAddress) {
-    let initial_supply = owner_supply + staker_supply;
-    cfg.token_address = deploy_mock_erc20_contract(:initial_supply, recipient: cfg.owner);
+    cfg.token_address = deploy_mock_erc20_contract(recipient: cfg.owner);
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
     IERC20Dispatcher { contract_address: cfg.token_address }
-        .transfer(recipient: cfg.staker_address, amount: staker_supply.into());
+        .transfer(recipient: cfg.staker_address, amount: INITIAL_SUPPLY / 2);
 
     cfg
         .staking_contract =
