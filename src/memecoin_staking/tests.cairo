@@ -337,9 +337,7 @@ fn test_close_reward_cycle() {
 #[test]
 fn test_query_points() {
     let mut cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: 3000, recipient: cfg.staker_address,
-    );
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
     cfg.token_address = token_address;
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let staking_contract_address = deploy_memecoin_staking_contract(
