@@ -78,7 +78,7 @@ fn test_stake() {
         :amount,
         :duration,
     );
-    assert!(stake_id == 1);
+    assert!(stake_id == 0);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::ThreeMonths;
@@ -89,7 +89,7 @@ fn test_stake() {
         :amount,
         :duration,
     );
-    assert!(stake_id == 2);
+    assert!(stake_id == 1);
 
     let loaded_current_version = load_value::<
         Version,

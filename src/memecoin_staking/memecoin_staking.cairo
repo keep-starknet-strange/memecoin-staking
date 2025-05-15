@@ -24,7 +24,7 @@ pub mod MemeCoinStaking {
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, StakerInfo>,
         /// Stores the total points for each version.
-        points_info: Vec<u128>,
+        total_points_per_version: Vec<u128>,
         /// The current version number.
         current_version: Version,
         /// The token dispatcher.
@@ -46,7 +46,7 @@ pub mod MemeCoinStaking {
         self.owner.write(value: owner);
         self.current_version.write(value: 0);
         self.token_dispatcher.write(value: IERC20Dispatcher { contract_address: token_address });
-        self.points_info.push(value: 0);
+        self.total_points_per_version.push(value: 0);
     }
 
     #[abi(embed_v0)]
@@ -67,11 +67,11 @@ pub mod MemeCoinStaking {
             let multiplier = duration.get_multiplier();
             assert!(multiplier.is_some(), "Invalid stake duration");
             let points = amount * multiplier.unwrap().into();
-            let stake_id = self.update_staker_info(:staker_address, :duration, :version, :amount);
-            self.update_points_info(:version, :points);
+            let stake_index = self.update_staker_info(:staker_address, :duration, :version, :amount);
+            self.update_total_points_per_version(:version, :points);
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
-            stake_id
+            stake_index
         }
     }
 
@@ -85,15 +85,10 @@ pub mod MemeCoinStaking {
             amount: Amount,
         ) -> Index {
             let mut stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
-            // The index should start at 1, as unstaking index 0 is reserved for unstaking all.
-            if stake_index == 0 {
-                // TODO: Maybe emit event for first stake.
-                stake_index = 1;
-                self.staker_info.entry(key: staker_address).stake_index.write(value: stake_index);
-            }
             let stake_info = StakeInfoImpl::new(id: stake_index, :version, :amount, :duration);
             self.staker_info.entry(key: staker_address).stake_index.add_and_write(value: 1);
             self.push_stake_info(:staker_address, :duration, :stake_info);
+            // TODO: Emit event.
             stake_index
         }
 
@@ -111,8 +106,8 @@ pub mod MemeCoinStaking {
                 .push(value: stake_info);
         }
 
-        fn update_points_info(ref self: ContractState, version: Version, points: Amount) {
-            self.points_info.at(index: version.into()).add_and_write(value: points);
+        fn update_total_points_per_version(ref self: ContractState, version: Version, points: Amount) {
+            self.total_points_per_version.at(index: version.into()).add_and_write(value: points);
         }
 
         fn transfer_to_contract(ref self: ContractState, sender: ContractAddress, amount: Amount) {
