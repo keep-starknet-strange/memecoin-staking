@@ -69,8 +69,7 @@ pub mod MemeCoinRewards {
             self: @ContractState, points_per_version: Span<(Version, u128)>,
         ) -> Amount {
             assert!(
-                get_caller_address() == self.staking_dispatcher.read().contract_address,
-                "Can only be called by the staking contract",
+                self.caller_is_staking_contract(), "Can only be called by the staking contract",
             );
             let mut total_rewards = 0;
             for (version, points) in points_per_version {
@@ -89,6 +88,31 @@ pub mod MemeCoinRewards {
                 }
             }
             total_rewards
+        }
+
+        fn claim_rewards(
+            ref self: ContractState, points_per_version: Span<(Version, u128)>,
+        ) -> Amount {
+            assert!(
+                self.caller_is_staking_contract(), "Can only be called by the staking contract",
+            );
+            let total_rewards = self.query_rewards(points_per_version);
+            self
+                .token_dispatcher
+                .read()
+                .transfer(
+                    recipient: self.staking_dispatcher.read().contract_address,
+                    amount: total_rewards.into(),
+                );
+            // TODO: Emit event.
+            total_rewards
+        }
+    }
+
+    #[generate_trait]
+    impl InternalMemeCoinRewardsImpl of InternalMemeCoinRewardsTrait {
+        fn caller_is_staking_contract(self: @ContractState) -> bool {
+            get_caller_address() == self.staking_dispatcher.read().contract_address
         }
     }
 }
