@@ -12,4 +12,8 @@ pub trait IMemeCoinRewards<TContractState> {
     /// Query this contract for the expected rewards given a list of points per version.
     /// Can only be called by the staking contract.
     fn query_rewards(self: @TContractState, points_per_version: Span<(Version, u128)>) -> Amount;
+
+    /// Claim rewards as per the points_per_version span.
+    /// Can only be called by the staking contract.
+    fn claim_rewards(ref self: TContractState, points_per_version: Span<(Version, u128)>) -> Amount;
 }
