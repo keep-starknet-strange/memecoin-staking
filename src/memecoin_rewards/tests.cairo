@@ -99,7 +99,7 @@ fn test_fund_no_points() {
 #[test]
 fn test_query_rewards() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let (token_dispatcher, staking_dispatcher, rewards_dispatcher) = get_all_dispatchers(cfg: @cfg);
 
     let mut points_per_version: Array<(Version, u128)> = ArrayTrait::new();
@@ -162,7 +162,7 @@ fn test_query_rewards() {
 #[should_panic(expected: "Can only be called by the staking contract")]
 fn test_query_rewards_wrong_caller() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
     let mut points_per_version: Array<(Version, u128)> = ArrayTrait::new();
@@ -173,7 +173,7 @@ fn test_query_rewards_wrong_caller() {
 #[test]
 fn test_query_rewards_no_stakes() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
     let mut points_per_version: Array<(Version, u128)> = ArrayTrait::new();
@@ -189,7 +189,7 @@ fn test_query_rewards_no_stakes() {
 #[should_panic(expected: "Invalid version")]
 fn test_query_rewards_invalid_version() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
     let mut points_per_version: Array<(Version, u128)> = ArrayTrait::new();
@@ -205,7 +205,7 @@ fn test_query_rewards_invalid_version() {
 #[should_panic(expected: "Invalid amount of points")]
 fn test_query_rewards_invalid_points() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let (token_dispatcher, staking_dispatcher, rewards_dispatcher) = get_all_dispatchers(cfg: @cfg);
 
     let amount: Amount = 1000;
