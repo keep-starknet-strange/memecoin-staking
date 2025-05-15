@@ -100,9 +100,7 @@ fn test_stake() {
 #[test]
 fn test_get_stake_info() {
     let cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: 2000, recipient: cfg.staker_address,
-    );
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
     let contract_address = deploy_memecoin_staking_contract(owner: cfg.owner, :token_address);
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address };
 
