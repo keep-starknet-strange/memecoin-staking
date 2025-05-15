@@ -270,9 +270,7 @@ fn test_stake_insufficient_balance() {
 #[should_panic(expected: "Can't close version with no stakes")]
 fn test_new_version_no_stakes() {
     let mut cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: 2000, recipient: cfg.staker_address,
-    );
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
     cfg.token_address = token_address;
     let staking_address = deploy_memecoin_staking_contract(
         owner: cfg.owner, token_address: cfg.token_address,
@@ -292,9 +290,7 @@ fn test_new_version_no_stakes() {
 #[test]
 fn test_new_version() {
     let mut cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: 2000, recipient: cfg.staker_address,
-    );
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
     cfg.token_address = token_address;
     let staking_address = deploy_memecoin_staking_contract(
         owner: cfg.owner, token_address: cfg.token_address,
