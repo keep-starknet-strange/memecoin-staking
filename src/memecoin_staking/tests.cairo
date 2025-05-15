@@ -3,8 +3,8 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value, INITIAL_SUPPLY,
+    INITIAL_SUPPLY, TestCfg, approve_and_stake, deploy_memecoin_staking_contract,
+    deploy_mock_erc20_contract, load_value,
 };
 use memecoin_staking::types::{Amount, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
