@@ -263,7 +263,7 @@ fn test_new_version() {
 #[test]
 fn test_query_rewards_sanity() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let (token_dispatcher, staking_dispatcher, _) = get_all_dispatchers(cfg: @cfg);
 
     let amount: Amount = 1000;
@@ -296,7 +296,7 @@ fn test_query_rewards_sanity() {
 #[test]
 fn test_query_rewards() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let (token_dispatcher, staking_dispatcher, _) = get_all_dispatchers(cfg: @cfg);
 
     let amount: Amount = 1000;
