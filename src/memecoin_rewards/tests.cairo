@@ -230,3 +230,147 @@ fn test_query_rewards_invalid_points() {
     );
     rewards_dispatcher.query_rewards(points_per_version: points_per_version.span());
 }
+
+#[test]
+fn test_claim_rewards_sanity() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_all_contracts(ref :cfg);
+    let (token_dispatcher, staking_dispatcher, rewards_dispatcher) = get_all_dispatchers(cfg: @cfg);
+
+    let amount: Amount = 1000;
+    let duration: StakeDuration = StakeDuration::OneMonth;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let fund_amount = 1000;
+    approve_and_fund(cfg: @cfg, amount: fund_amount);
+
+    let mut points_per_version: Array<(Version, u128)> = ArrayTrait::new();
+    let points = amount * duration.get_multiplier().unwrap().into();
+    points_per_version.append((0, points));
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    let rewards = rewards_dispatcher.claim_rewards(points_per_version: points_per_version.span());
+    assert!(rewards == fund_amount);
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    assert!(staking_contract_balance == fund_amount.into() + amount.into());
+}
+
+#[test]
+#[should_panic(expected: "Can only be called by the staking contract")]
+fn test_claim_rewards_wrong_caller() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_all_contracts(ref :cfg);
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    let mut points_per_version: Array<(Version, u128)> = ArrayTrait::new();
+    points_per_version.append((0, 1000));
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staker_address,
+    );
+    rewards_dispatcher.claim_rewards(points_per_version: points_per_version.span());
+}
+
+#[test]
+fn test_claim_rewards_multiple_versions() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_all_contracts(ref :cfg);
+    let (token_dispatcher, staking_dispatcher, rewards_dispatcher) = get_all_dispatchers(cfg: @cfg);
+
+    let mut staker_points: u128 = 0;
+    let mut total_points: u128 = 0;
+    let mut total_staked: Amount = 0;
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    staker_points += amount * duration.get_multiplier().unwrap().into();
+    total_points += staker_points;
+    total_staked += amount;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let version_0_total_rewards = 1000;
+    approve_and_fund(cfg: @cfg, amount: version_0_total_rewards);
+    let version_0_total_points = staker_points;
+
+    staker_points = 0;
+
+    let amount = 5000;
+    staker_points += amount * duration.get_multiplier().unwrap().into();
+    total_points += staker_points;
+    total_staked += amount;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let amount = 1000;
+    staker_points += amount * duration.get_multiplier().unwrap().into();
+    total_points += staker_points;
+    total_staked += amount;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let version_1_total_rewards = 10000;
+    approve_and_fund(cfg: @cfg, amount: version_1_total_rewards);
+    let version_1_total_points = staker_points;
+
+    staker_points = 0;
+
+    let amount = 2000;
+    staker_points += amount * duration.get_multiplier().unwrap().into();
+    total_points += staker_points;
+    total_staked += amount;
+    approve_and_stake(
+        token_dispatcher: @token_dispatcher,
+        staking_dispatcher: @staking_dispatcher,
+        staker_address: cfg.staker_address,
+        :amount,
+        :duration,
+    );
+
+    let version_2_total_rewards = 6000;
+    approve_and_fund(cfg: @cfg, amount: version_2_total_rewards);
+    let version_2_total_points = staker_points;
+
+    let version_0_points = version_0_total_points;
+    let version_1_points = version_1_total_points / 2;
+    let version_2_points = version_2_total_points / 5;
+    let version_0_rewards = version_0_total_rewards;
+    let version_1_rewards = version_1_total_rewards / 2;
+    let version_2_rewards = version_2_total_rewards / 5;
+
+    let points_per_version: Span<(Version, u128)> = array![
+        (0, version_0_points), (1, version_1_points), (2, version_2_points),
+    ]
+        .span();
+
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    let rewards = rewards_dispatcher.claim_rewards(points_per_version: points_per_version);
+    let calculated_rewards = version_0_rewards + version_1_rewards + version_2_rewards;
+    assert!(rewards == calculated_rewards);
+
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    assert!(staking_contract_balance == total_staked.into() + calculated_rewards.into());
+}
