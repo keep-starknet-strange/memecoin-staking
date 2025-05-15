@@ -9,6 +9,8 @@ use starknet::{ContractAddress, Store};
 use starkware_utils::test_utils::cheat_caller_address_once;
 use starkware_utils::types::time::time::Time;
 
+pub const INITIAL_SUPPLY: u256 = 100000;
+
 pub struct TestCfg {
     pub owner: ContractAddress,
     pub rewards_contract: ContractAddress,
@@ -42,15 +44,13 @@ pub fn deploy_memecoin_staking_contract(
     contract_address
 }
 
-pub fn deploy_mock_erc20_contract(
-    initial_supply: u256, recipient: ContractAddress,
-) -> ContractAddress {
+pub fn deploy_mock_erc20_contract(recipient: ContractAddress) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     let name: ByteArray = "NAME";
     let symbol: ByteArray = "SYMBOL";
     name.serialize(ref output: calldata);
     symbol.serialize(ref output: calldata);
-    initial_supply.serialize(ref output: calldata);
+    INITIAL_SUPPLY.serialize(ref output: calldata);
     recipient.serialize(ref output: calldata);
 
     let erc20_contract = declare(contract: "DualCaseERC20Mock").unwrap().contract_class();
