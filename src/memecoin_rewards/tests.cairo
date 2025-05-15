@@ -33,7 +33,7 @@ fn test_constructor() {
 #[test]
 fn test_fund() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
@@ -65,7 +65,7 @@ fn test_fund() {
 #[should_panic(expected: "Can only be called by the owner")]
 fn test_fund_wrong_caller() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
@@ -90,7 +90,7 @@ fn test_fund_wrong_caller() {
 #[should_panic(expected: "Can't close version with no stakes")]
 fn test_fund_no_points() {
     let mut cfg: TestCfg = Default::default();
-    deploy_all_contracts(ref :cfg, owner_supply: 42069, staker_supply: 42069);
+    deploy_all_contracts(ref :cfg);
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.owner);
