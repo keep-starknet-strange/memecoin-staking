@@ -1,4 +1,5 @@
 use memecoin_staking::memecoin_staking::interface::{
+    IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
     StakeInfo, StakeInfoTrait,
 };
@@ -13,9 +14,11 @@ use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 pub const INITIAL_SUPPLY: u256 = 100000;
 
+#[derive(Drop)]
 pub struct TestCfg {
     pub owner: ContractAddress,
     pub rewards_contract: ContractAddress,
+    pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
 }
@@ -25,6 +28,7 @@ impl TestInitConfigDefault of Default<TestCfg> {
         TestCfg {
             owner: 'OWNER'.try_into().unwrap(),
             rewards_contract: 'REWARDS_CONTRACT'.try_into().unwrap(),
+            staking_contract: 'STAKING_CONTRACT'.try_into().unwrap(),
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
         }
@@ -54,6 +58,22 @@ pub fn deploy_memecoin_staking_contract(
     contract_address
 }
 
+pub fn deploy_memecoin_rewards_contract(
+    owner: ContractAddress, staking_address: ContractAddress, token_address: ContractAddress,
+) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    owner.serialize(ref output: calldata);
+    staking_address.serialize(ref output: calldata);
+    token_address.serialize(ref output: calldata);
+
+    let memecoin_rewards_contract = declare(contract: "MemeCoinRewards").unwrap().contract_class();
+    let (contract_address, _) = memecoin_rewards_contract
+        .deploy(constructor_calldata: @calldata)
+        .unwrap();
+
+    contract_address
+}
+
 pub fn deploy_mock_erc20_contract(recipient: ContractAddress) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     let name: ByteArray = "NAME";
@@ -67,6 +87,31 @@ pub fn deploy_mock_erc20_contract(recipient: ContractAddress) -> ContractAddress
     let (contract_address, _) = erc20_contract.deploy(constructor_calldata: @calldata).unwrap();
 
     contract_address
+}
+
+pub fn deploy_all_contracts(
+    ref cfg: TestCfg,
+) -> (ContractAddress, ContractAddress, ContractAddress) {
+    cfg.token_address = deploy_mock_erc20_contract(recipient: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    IERC20Dispatcher { contract_address: cfg.token_address }
+        .transfer(recipient: cfg.staker_address, amount: INITIAL_SUPPLY / 2);
+
+    cfg
+        .staking_contract =
+            deploy_memecoin_staking_contract(owner: cfg.owner, token_address: cfg.token_address);
+    cfg
+        .rewards_contract =
+            deploy_memecoin_rewards_contract(
+                owner: cfg.owner,
+                staking_address: cfg.staking_contract,
+                token_address: cfg.token_address,
+            );
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract }
+        .set_rewards_contract(rewards_contract: cfg.rewards_contract);
+
+    (cfg.token_address, cfg.staking_contract, cfg.rewards_contract)
 }
 
 pub fn load_value<T, +Serde<T>, +Store<T>>(
