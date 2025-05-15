@@ -3,13 +3,14 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
 };
 use memecoin_staking::test_utils::{
-    INITIAL_SUPPLY, TestCfg, approve_and_fund, approve_and_stake, deploy_all_contracts,
-    deploy_memecoin_staking_contract, deploy_mock_erc20_contract, get_all_dispatchers, load_value,
-    stake_and_verify_stake_info,
+    INITIAL_SUPPLY, TestCfg, advance_time, approve_and_fund, approve_and_stake,
+    deploy_all_contracts, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
+    get_all_dispatchers, load_value, stake_and_verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use starkware_utils::math::utils::mul_wide_and_floor_div;
+use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
@@ -282,6 +283,13 @@ fn test_query_rewards_sanity() {
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
     let rewards = staking_dispatcher.query_rewards();
+    assert!(rewards == 0);
+
+    advance_time(duration.to_time_delta().unwrap() + Time::days(1));
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.query_rewards();
     assert!(rewards == fund_amount);
 }
 
@@ -344,5 +352,31 @@ fn test_query_rewards() {
         lhs: staker_points, rhs: fund_amount, div: total_points,
     )
         .unwrap();
+    assert!(rewards == 0);
+    advance_time(StakeDuration::OneMonth.to_time_delta().unwrap());
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.query_rewards();
+    assert!(rewards == original_rewards);
+
+    advance_time(
+        StakeDuration::ThreeMonths.to_time_delta().unwrap()
+            - StakeDuration::OneMonth.to_time_delta().unwrap(),
+    );
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.query_rewards();
+    assert!(rewards == calculated_rewards + original_rewards);
+
+    advance_time(
+        StakeDuration::SixMonths.to_time_delta().unwrap()
+            - StakeDuration::ThreeMonths.to_time_delta().unwrap(),
+    );
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.query_rewards();
     assert!(rewards == calculated_rewards + original_rewards);
 }

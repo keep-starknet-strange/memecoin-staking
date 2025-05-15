@@ -10,9 +10,10 @@ use memecoin_staking::types::{Amount, Index, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
     CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
+    start_cheat_block_timestamp_global,
 };
 use starknet::{ContractAddress, Store};
-use starkware_utils::types::time::time::Time;
+use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 pub const INITIAL_SUPPLY: u256 = 100000;
@@ -213,4 +214,12 @@ pub fn approve_and_fund(cfg: @TestCfg, amount: Amount) {
         contract_address: rewards_dispatcher.contract_address, caller_address: *cfg.owner,
     );
     rewards_dispatcher.fund(amount: amount);
+}
+
+pub fn set_time(timestamp: Timestamp) {
+    start_cheat_block_timestamp_global(block_timestamp: timestamp.into());
+}
+
+pub fn advance_time(delta: TimeDelta) {
+    set_time(timestamp: Time::now().add(delta: delta));
 }

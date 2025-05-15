@@ -15,6 +15,7 @@ pub mod MemeCoinStaking {
         Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starkware_utils::types::time::time::{Time, Timestamp};
     use starkware_utils::utils::AddToStorage;
 
     #[storage]
@@ -111,8 +112,12 @@ pub mod MemeCoinStaking {
         fn query_rewards(self: @ContractState) -> Amount {
             let staker_address = get_caller_address();
             let mut points_per_version: Felt252Dict<u128> = Default::default();
+            let curr_timestamp = Time::now();
             for duration in StakeDurationIterTrait::new() {
-                self.accumulate_points(:staker_address, :duration, ref :points_per_version);
+                self
+                    .accumulate_points(
+                        :staker_address, :duration, ref :points_per_version, :curr_timestamp,
+                    );
             }
             let rewards_dispatcher = IMemeCoinRewardsDispatcher {
                 contract_address: self.rewards_contract.read(),
@@ -185,6 +190,7 @@ pub mod MemeCoinStaking {
             staker_address: ContractAddress,
             duration: StakeDuration,
             ref points_per_version: Felt252Dict<u128>,
+            curr_timestamp: Timestamp,
         ) {
             let stakes = self
                 .staker_info
@@ -194,10 +200,14 @@ pub mod MemeCoinStaking {
             let multiplier = duration.get_multiplier().unwrap().into();
             for i in 0..stakes.len() {
                 let stake = stakes.at(index: i).read();
-                let version = stake.get_version();
-                let stake_points = stake.get_amount() * multiplier;
-                let curr_points = points_per_version.get(key: version.into());
-                points_per_version.insert(key: version.into(), value: curr_points + stake_points);
+                let vesting_time = stake.get_vesting_time();
+                if vesting_time <= curr_timestamp {
+                    let version = stake.get_version();
+                    let stake_points = stake.get_amount() * multiplier;
+                    let curr_points = points_per_version.get(key: version.into());
+                    points_per_version
+                        .insert(key: version.into(), value: curr_points + stake_points);
+                }
             }
         }
     }
