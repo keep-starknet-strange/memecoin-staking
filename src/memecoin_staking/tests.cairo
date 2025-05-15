@@ -4,7 +4,7 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value,
+    load_value, INITIAL_SUPPLY,
 };
 use memecoin_staking::types::{Amount, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -64,9 +64,7 @@ fn test_set_rewards_contract_wrong_caller() {
 #[test]
 fn test_stake() {
     let cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: 2000, recipient: cfg.staker_address,
-    );
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let contract_address = deploy_memecoin_staking_contract(owner: cfg.owner, :token_address);
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address };
@@ -103,9 +101,7 @@ fn test_stake() {
 #[should_panic(expected: 'ERC20: insufficient allowance')]
 fn test_stake_without_approve() {
     let cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: 1000, recipient: cfg.staker_address,
-    );
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
     let contract_address = deploy_memecoin_staking_contract(owner: cfg.owner, :token_address);
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address };
 
@@ -119,18 +115,16 @@ fn test_stake_without_approve() {
 #[should_panic(expected: 'ERC20: insufficient balance')]
 fn test_stake_insufficient_balance() {
     let cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(
-        initial_supply: 500, recipient: cfg.staker_address,
-    );
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
     let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
     let contract_address = deploy_memecoin_staking_contract(owner: cfg.owner, :token_address);
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address };
 
-    let amount: Amount = 1000;
+    let amount: u256 = INITIAL_SUPPLY + 1;
     let duration = StakeDuration::OneMonth;
     cheat_caller_address_once(contract_address: token_address, caller_address: cfg.staker_address);
-    token_dispatcher.approve(spender: contract_address, amount: amount.into());
+    token_dispatcher.approve(spender: contract_address, amount: amount);
     cheat_caller_address_once(:contract_address, caller_address: cfg.staker_address);
-    staking_dispatcher.stake(:amount, :duration);
+    staking_dispatcher.stake(amount: amount.try_into().unwrap(), :duration);
 }
 
