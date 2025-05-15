@@ -86,6 +86,23 @@ pub mod MemeCoinStaking {
             }
             result.span()
         }
+
+        fn new_version(ref self: ContractState) -> Amount {
+            assert!(
+                get_caller_address() == self.rewards_contract.read(),
+                "Can only be called by the rewards contract",
+            );
+            let curr_version = self.current_version.read();
+            let total_points = self.points_info.at(index: curr_version.into()).read();
+            assert!(total_points > 0, "Can't close version with no stakes");
+            self.current_version.add_and_write(value: 1);
+            self.points_info.push(value: 0);
+            assert!(
+                self.points_info.len() == self.current_version.read().into() + 1,
+                "Invalid points info length",
+            );
+            total_points
+        }
     }
 
     #[generate_trait]
