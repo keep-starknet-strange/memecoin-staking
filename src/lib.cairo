@@ -3,3 +3,4 @@ pub mod memecoin_staking;
 
 #[cfg(test)]
 mod test_utils;
+pub mod types;
