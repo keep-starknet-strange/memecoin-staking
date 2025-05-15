@@ -1,4 +1,4 @@
-use memecoin_staking::types::{Amount, Index, Multiplier, Version};
+use memecoin_staking::types::{Amount, Cycle, Index, Multiplier};
 use starknet::ContractAddress;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
 
@@ -64,10 +64,10 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
 pub struct StakeInfo {
     /// The stake id (unique to the staker, used for unstaking).
     id: Index,
-    /// The version number.
-    /// Stakes in the same version share a points / rewards ratio,
+    /// The reward cycle number.
+    /// Stakes in the same reward cycle share a points / rewards ratio,
     /// set according to the amount of rewards funded by the owner.
-    version: Version,
+    reward_cycle: Cycle,
     /// The amount staked.
     amount: Amount,
     /// The vesting time (the time when rewards can be claimed for this stake).
@@ -76,10 +76,10 @@ pub struct StakeInfo {
 
 #[generate_trait]
 pub(crate) impl StakeInfoImpl of StakeInfoTrait {
-    fn new(id: Index, version: Version, amount: Amount, duration: StakeDuration) -> StakeInfo {
+    fn new(id: Index, reward_cycle: Cycle, amount: Amount, duration: StakeDuration) -> StakeInfo {
         let time_delta = duration.to_time_delta();
         assert!(time_delta.is_some(), "Invalid stake duration");
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
-        StakeInfo { id, version, amount, vesting_time }
+        StakeInfo { id, reward_cycle, amount, vesting_time }
     }
 }

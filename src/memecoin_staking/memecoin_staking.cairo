@@ -4,7 +4,7 @@ pub mod MemeCoinStaking {
         IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
         StakeInfoImpl,
     };
-    use memecoin_staking::types::{Amount, Index, Version};
+    use memecoin_staking::types::{Amount, Cycle, Index};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
         Map, MutableVecTrait, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
@@ -23,10 +23,10 @@ pub mod MemeCoinStaking {
         rewards_contract: ContractAddress,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, StakerInfo>,
-        /// Stores the total points for each version.
-        total_points_per_version: Vec<u128>,
-        /// The current version number.
-        current_version: Version,
+        /// Stores the total points for each reward_cycle.
+        total_points_per_reward_cycle: Vec<u128>,
+        /// The current reward_cycle number.
+        current_reward_cycle: Cycle,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
     }
@@ -44,9 +44,9 @@ pub mod MemeCoinStaking {
         ref self: ContractState, owner: ContractAddress, token_address: ContractAddress,
     ) {
         self.owner.write(value: owner);
-        self.current_version.write(value: 0);
+        self.current_reward_cycle.write(value: 0);
         self.token_dispatcher.write(value: IERC20Dispatcher { contract_address: token_address });
-        self.total_points_per_version.push(value: 0);
+        self.total_points_per_reward_cycle.push(value: 0);
     }
 
     #[abi(embed_v0)]
@@ -63,12 +63,13 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
         fn stake(ref self: ContractState, amount: Amount, duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
-            let version = self.current_version.read();
+            let reward_cycle = self.current_reward_cycle.read();
             let multiplier = duration.get_multiplier();
             assert!(multiplier.is_some(), "Invalid stake duration");
             let points = amount * multiplier.unwrap().into();
-            let stake_index = self.update_staker_info(:staker_address, :duration, :version, :amount);
-            self.update_total_points_per_version(:version, :points);
+            let stake_index = self
+                .update_staker_info(:staker_address, :duration, :reward_cycle, :amount);
+            self.update_total_points_per_reward_cycle(:reward_cycle, :points);
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
             stake_index
@@ -81,11 +82,11 @@ pub mod MemeCoinStaking {
             ref self: ContractState,
             staker_address: ContractAddress,
             duration: StakeDuration,
-            version: Version,
+            reward_cycle: Cycle,
             amount: Amount,
         ) -> Index {
             let mut stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
-            let stake_info = StakeInfoImpl::new(id: stake_index, :version, :amount, :duration);
+            let stake_info = StakeInfoImpl::new(id: stake_index, :reward_cycle, :amount, :duration);
             self.staker_info.entry(key: staker_address).stake_index.add_and_write(value: 1);
             self.push_stake_info(:staker_address, :duration, :stake_info);
             // TODO: Emit event.
@@ -106,8 +107,13 @@ pub mod MemeCoinStaking {
                 .push(value: stake_info);
         }
 
-        fn update_total_points_per_version(ref self: ContractState, version: Version, points: Amount) {
-            self.total_points_per_version.at(index: version.into()).add_and_write(value: points);
+        fn update_total_points_per_reward_cycle(
+            ref self: ContractState, reward_cycle: Cycle, points: Amount,
+        ) {
+            self
+                .total_points_per_reward_cycle
+                .at(index: reward_cycle.into())
+                .add_and_write(value: points);
         }
 
         fn transfer_to_contract(ref self: ContractState, sender: ContractAddress, amount: Amount) {

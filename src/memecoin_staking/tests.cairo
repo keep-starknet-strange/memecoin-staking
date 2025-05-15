@@ -6,7 +6,7 @@ use memecoin_staking::test_utils::{
     INITIAL_SUPPLY, TestCfg, approve_and_stake, deploy_memecoin_staking_contract,
     deploy_mock_erc20_contract, load_value,
 };
-use memecoin_staking::types::{Amount, Version};
+use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use starkware_utils::test_utils::cheat_caller_address_once;
 
@@ -20,10 +20,10 @@ fn test_constructor() {
     let loaded_owner = load_value(:contract_address, storage_address: selector!("owner"));
     assert!(loaded_owner == cfg.owner);
 
-    let loaded_current_version = load_value::<
-        Version,
-    >(:contract_address, storage_address: selector!("current_version"));
-    assert!(loaded_current_version == 0);
+    let loaded_current_reward_cycle = load_value::<
+        Cycle,
+    >(:contract_address, storage_address: selector!("current_reward_cycle"));
+    assert!(loaded_current_reward_cycle == 0);
 
     let loaded_token_dispatcher = load_value::<
         IERC20Dispatcher,
@@ -91,10 +91,10 @@ fn test_stake() {
     );
     assert!(stake_id == 1);
 
-    let loaded_current_version = load_value::<
-        Version,
-    >(:contract_address, storage_address: selector!("current_version"));
-    assert!(loaded_current_version == 0);
+    let loaded_current_reward_cycle = load_value::<
+        Cycle,
+    >(:contract_address, storage_address: selector!("current_reward_cycle"));
+    assert!(loaded_current_reward_cycle == 0);
 }
 
 #[test]
