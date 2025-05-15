@@ -1,14 +1,14 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
     use memecoin_staking::memecoin_staking::interface::{
-        IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
-        StakeInfoImpl,
+        IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationIterTrait,
+        StakeDurationTrait, StakeInfo, StakeInfoImpl,
     };
     use memecoin_staking::types::{Amount, Index, Version};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
         Map, MutableVecTrait, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
-        Vec,
+        Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::utils::AddToStorage;
@@ -72,6 +72,19 @@ pub mod MemeCoinStaking {
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
             stake_id
+        }
+
+        fn get_stake_info(self: @ContractState) -> Span<StakeInfo> {
+            let staker_address = get_caller_address();
+            let mut result = array![];
+            let staker_info = self.staker_info.entry(key: staker_address);
+            for duration in StakeDurationIterTrait::new() {
+                let stakes = staker_info.stake_info.entry(key: duration);
+                for i in 0..stakes.len() {
+                    result.append(value: stakes.at(index: i).read());
+                }
+            }
+            result.span()
         }
     }
 

@@ -14,10 +14,13 @@ pub trait IMemeCoinStaking<TContractState> {
     /// Stakes the specified amount of meme coin for the specified duration.
     /// Returns the stake id.
     fn stake(ref self: TContractState, amount: Amount, duration: StakeDuration) -> Index;
+
+    /// Get info for all stakes for the caller.
+    fn get_stake_info(self: @TContractState) -> Span<StakeInfo>;
 }
 
 /// Different stake durations.
-#[derive(starknet::Store, Drop, Hash, Serde, Copy)]
+#[derive(starknet::Store, Drop, Hash, Serde, Copy, PartialEq)]
 pub enum StakeDuration {
     #[default]
     None,
@@ -59,8 +62,41 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
     }
 }
 
+/// Iterator over all stake duration options.
+#[derive(Drop)]
+struct StakeDurationIter {
+    stake_duration: StakeDuration,
+}
+
+#[generate_trait]
+pub(crate) impl StakeDurationIterImpl of StakeDurationIterTrait {
+    fn new() -> StakeDurationIter {
+        StakeDurationIter { stake_duration: StakeDuration::OneMonth }
+    }
+}
+
+pub(crate) impl StakeDurationIteratorImpl of Iterator<StakeDurationIter> {
+    type Item = StakeDuration;
+
+    fn next(ref self: StakeDurationIter) -> Option<StakeDuration> {
+        let prev = self.stake_duration;
+        match self.stake_duration {
+            StakeDuration::OneMonth => { self.stake_duration = StakeDuration::ThreeMonths; },
+            StakeDuration::ThreeMonths => { self.stake_duration = StakeDuration::SixMonths; },
+            StakeDuration::SixMonths => { self.stake_duration = StakeDuration::TwelveMonths; },
+            StakeDuration::TwelveMonths => { self.stake_duration = StakeDuration::None; },
+            StakeDuration::None => (),
+        }
+        if prev == StakeDuration::None {
+            None
+        } else {
+            Some(prev)
+        }
+    }
+}
+
 /// Stake info for each stake.
-#[derive(starknet::Store, Drop)]
+#[derive(starknet::Store, Drop, Serde)]
 pub struct StakeInfo {
     /// The stake id (unique to the staker, used for unstaking).
     id: Index,
@@ -81,5 +117,21 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         assert!(time_delta.is_some(), "Invalid stake duration");
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
         StakeInfo { id, version, amount, vesting_time }
+    }
+
+    fn get_id(self: @StakeInfo) -> Index {
+        *self.id
+    }
+
+    fn get_version(self: @StakeInfo) -> Version {
+        *self.version
+    }
+
+    fn get_amount(self: @StakeInfo) -> Amount {
+        *self.amount
+    }
+
+    fn get_vesting_time(self: @StakeInfo) -> Timestamp {
+        *self.vesting_time
     }
 }

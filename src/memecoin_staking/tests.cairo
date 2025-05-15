@@ -3,8 +3,8 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value, INITIAL_SUPPLY,
+    INITIAL_SUPPLY, TestCfg, approve_and_stake, deploy_memecoin_staking_contract,
+    deploy_mock_erc20_contract, load_value, stake_and_verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Version};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -95,6 +95,62 @@ fn test_stake() {
         Version,
     >(:contract_address, storage_address: selector!("current_version"));
     assert!(loaded_current_version == 0);
+}
+
+#[test]
+fn test_get_stake_info() {
+    let cfg: TestCfg = Default::default();
+    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
+    let contract_address = deploy_memecoin_staking_contract(owner: cfg.owner, :token_address);
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address };
+
+    cheat_caller_address_once(contract_address: token_address, caller_address: cfg.staker_address);
+    let stake_info = staking_dispatcher.get_stake_info();
+    assert!(stake_info.len() == 0);
+
+    let amount: Amount = 1000;
+    let duration = StakeDuration::OneMonth;
+    stake_and_verify_stake_info(
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 0,
+    );
+
+    let amount: Amount = 500;
+    let duration = StakeDuration::ThreeMonths;
+    stake_and_verify_stake_info(
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 1,
+    );
+
+    let amount: Amount = 250;
+    let duration = StakeDuration::SixMonths;
+    stake_and_verify_stake_info(
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 2,
+    );
+
+    let amount: Amount = 125;
+    let duration = StakeDuration::TwelveMonths;
+    stake_and_verify_stake_info(
+        :contract_address,
+        staker_address: cfg.staker_address,
+        :token_address,
+        :amount,
+        :duration,
+        stake_count: 3,
+    );
 }
 
 #[test]
