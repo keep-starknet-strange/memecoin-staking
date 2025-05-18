@@ -71,7 +71,7 @@ pub fn load_value<T, +Serde<T>, +Store<T>>(
 }
 
 pub fn approve_and_stake(
-    cfg: @TestCfg, staker_address: ContractAddress, amount: Amount, duration: StakeDuration,
+    cfg: @TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
 ) -> Index {
     let token_dispatcher = IERC20Dispatcher { contract_address: *cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
@@ -82,5 +82,5 @@ pub fn approve_and_stake(
     cheat_caller_address_once(
         contract_address: staking_dispatcher.contract_address, caller_address: staker_address,
     );
-    staking_dispatcher.stake(:amount, :duration)
+    staking_dispatcher.stake(:amount, :stake_duration)
 }

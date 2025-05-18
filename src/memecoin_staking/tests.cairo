@@ -67,16 +67,16 @@ fn test_stake() {
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: 2000);
 
     let amount: Amount = 1000;
-    let duration = StakeDuration::OneMonth;
+    let stake_duration = StakeDuration::OneMonth;
     let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :duration,
+        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
     assert!(stake_index == 0);
 
     let amount: Amount = 1000;
-    let duration = StakeDuration::ThreeMonths;
+    let stake_duration = StakeDuration::ThreeMonths;
     let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :duration,
+        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
     assert!(stake_index == 1);
 
@@ -95,11 +95,11 @@ fn test_stake_without_approve() {
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
     let amount: Amount = 1000;
-    let duration = StakeDuration::OneMonth;
+    let stake_duration = StakeDuration::OneMonth;
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    staking_dispatcher.stake(:amount, :duration);
+    staking_dispatcher.stake(:amount, :stake_duration);
 }
 
 #[test]
@@ -112,7 +112,7 @@ fn test_stake_insufficient_balance() {
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
     let amount: u256 = INITIAL_SUPPLY + 1;
-    let duration = StakeDuration::OneMonth;
+    let stake_duration = StakeDuration::OneMonth;
     cheat_caller_address_once(
         contract_address: cfg.token_address, caller_address: cfg.staker_address,
     );
@@ -120,6 +120,6 @@ fn test_stake_insufficient_balance() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    staking_dispatcher.stake(amount: amount.try_into().unwrap(), :duration);
+    staking_dispatcher.stake(amount: amount.try_into().unwrap(), :stake_duration);
 }
 
