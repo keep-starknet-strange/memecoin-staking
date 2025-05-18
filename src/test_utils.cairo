@@ -113,13 +113,9 @@ pub fn stake_and_verify_stake_info(
     cheat_caller_address_once(
         contract_address: *cfg.staking_contract, caller_address: *cfg.staker_address,
     );
-    let stake_info = staking_dispatcher.get_stake_info();
+    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
     verify_stake_info(
-        stake_info: find_stake_by_index(stake_info: @stake_info, index: stake_index).unwrap(),
-        stake_index: stake_index,
-        :reward_cycle,
-        :amount,
-        :stake_duration,
+        stake_info: @stake_info, :stake_index, :reward_cycle, :amount, :stake_duration,
     );
 }
 
