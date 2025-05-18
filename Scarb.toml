@@ -7,11 +7,11 @@ edition = "2024_07"
 
 [dependencies]
 starknet = "2.9.2"
-starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "cb180ac4d561cb675466b26e8c619d946a5d23c6" }
+starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", ref = "f120b3b84255e88f8b970f9185cedc093521aba3" }
+starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", ref = "f120b3b84255e88f8b970f9185cedc093521aba3" }
 
 [dev-dependencies]
-snforge_std = "0.34.0"
-snforge_scarb_plugin = "0.34.0"
+snforge_std = "0.41.0"
 assert_macros = "2.11.0"
 openzeppelin = "1.0.0"
 

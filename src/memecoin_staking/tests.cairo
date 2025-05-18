@@ -8,7 +8,7 @@ use memecoin_staking::test_utils::{
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use starkware_utils::test_utils::cheat_caller_address_once;
+use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_constructor() {
@@ -125,7 +125,11 @@ fn test_get_stake_info() {
     let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 1);
     verify_stake_info(
-        stake_info: stake_info.at(index: 0), index: 0, reward_cycle: 0, :amount, :stake_duration,
+        stake_info: stake_info.at(index: 0),
+        stake_index: 0,
+        reward_cycle: 0,
+        :amount,
+        :stake_duration,
     );
 
     let amount: Amount = staker_supply / 2;
@@ -138,7 +142,11 @@ fn test_get_stake_info() {
     let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 2);
     verify_stake_info(
-        stake_info: stake_info.at(index: 1), index: 1, reward_cycle: 0, :amount, :stake_duration,
+        stake_info: stake_info.at(index: 1),
+        stake_index: 1,
+        reward_cycle: 0,
+        :amount,
+        :stake_duration,
     );
 
     let amount: Amount = staker_supply / 2;
@@ -151,7 +159,11 @@ fn test_get_stake_info() {
     let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 3);
     verify_stake_info(
-        stake_info: stake_info.at(index: 2), index: 2, reward_cycle: 0, :amount, :stake_duration,
+        stake_info: stake_info.at(index: 2),
+        stake_index: 2,
+        reward_cycle: 0,
+        :amount,
+        :stake_duration,
     );
 
     let amount: Amount = staker_supply / 2;
@@ -164,7 +176,11 @@ fn test_get_stake_info() {
     let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 4);
     verify_stake_info(
-        stake_info: stake_info.at(index: 3), index: 3, reward_cycle: 0, :amount, :stake_duration,
+        stake_info: stake_info.at(index: 3),
+        stake_index: 3,
+        reward_cycle: 0,
+        :amount,
+        :stake_duration,
     );
 }
 
