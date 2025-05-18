@@ -63,11 +63,11 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
         fn stake(ref self: ContractState, amount: Amount, stake_duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
-            let stake_index = self.update_staker_info(:staker_address, :stake_duration, :amount);
+            let index = self.update_staker_info(:staker_address, :stake_duration, :amount);
             self.update_total_points_per_reward_cycle(:amount, :stake_duration);
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
-            stake_index
+            index
         }
     }
 
@@ -79,15 +79,13 @@ pub mod MemeCoinStaking {
             stake_duration: StakeDuration,
             amount: Amount,
         ) -> Index {
-            let stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
+            let index = self.staker_info.entry(key: staker_address).stake_index.read();
             let reward_cycle = self.current_reward_cycle.read();
-            let stake_info = StakeInfoImpl::new(
-                index: stake_index, :reward_cycle, :amount, :stake_duration,
-            );
+            let stake_info = StakeInfoImpl::new(:index, :reward_cycle, :amount, :stake_duration);
             self.staker_info.entry(key: staker_address).stake_index.add_and_write(value: 1);
             self.push_stake_info(:staker_address, :stake_duration, :stake_info);
             // TODO: Emit event.
-            stake_index
+            index
         }
 
         fn push_stake_info(
