@@ -4,9 +4,9 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value, verify_stake_info,
+    load_value, stake_and_verify_stake_info, verify_stake_info,
 };
-use memecoin_staking::types::{Amount, Cycle, Index};
+use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
@@ -266,73 +266,70 @@ fn test_stake_insufficient_balance() {
 }
 
 #[test]
-#[should_panic(expected: "Can't close version with no stakes")]
-fn test_new_version_no_stakes() {
+#[should_panic(expected: "Can't close reward cycle with no stakes")]
+fn test_close_reward_cycle_no_stakes() {
     let mut cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
-    cfg.token_address = token_address;
-    let staking_address = deploy_memecoin_staking_contract(
-        owner: cfg.owner, token_address: cfg.token_address,
-    );
-    let config_dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: staking_address };
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: staking_address };
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    deploy_memecoin_staking_contract(ref :cfg);
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher {
+        contract_address: cfg.staking_contract,
+    };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    cheat_caller_address_once(contract_address: staking_address, caller_address: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
 
     cheat_caller_address_once(
-        contract_address: staking_address, caller_address: cfg.rewards_contract,
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
-    staking_dispatcher.new_version();
+    staking_dispatcher.close_reward_cycle();
 }
 
 #[test]
-fn test_new_version() {
+fn test_close_reward_cycle() {
     let mut cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
-    cfg.token_address = token_address;
-    let staking_address = deploy_memecoin_staking_contract(
-        owner: cfg.owner, token_address: cfg.token_address,
-    );
-    let config_dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: staking_address };
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: staking_address };
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    deploy_memecoin_staking_contract(ref :cfg);
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher {
+        contract_address: cfg.staking_contract,
+    };
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    cheat_caller_address_once(contract_address: staking_address, caller_address: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
 
-    let mut version = 0;
-    let amount: Amount = 1000;
-    let duration = StakeDuration::OneMonth;
-    stake_and_verify_stake_info(
-        contract_address: staking_address,
-        staker_address: cfg.staker_address,
-        :token_address,
-        :amount,
-        :duration,
-        :version,
-    );
+    let staker_supply: Amount = 2000;
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
+
+    let mut reward_cycle = 0;
+    let amount: Amount = staker_supply / 2;
+    let stake_duration = StakeDuration::OneMonth;
+    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, :reward_cycle);
 
     cheat_caller_address_once(
-        contract_address: staking_address, caller_address: cfg.rewards_contract,
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
-    let total_points = staking_dispatcher.new_version();
-    version += 1;
-    assert!(total_points == amount * duration.get_multiplier().unwrap().into());
+    let total_points = staking_dispatcher.close_reward_cycle();
+    reward_cycle += 1;
+    assert!(total_points == amount * stake_duration.get_multiplier().unwrap().into());
+    let loaded_current_reward_cycle = load_value::<
+        Cycle,
+    >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
+    assert!(loaded_current_reward_cycle == reward_cycle);
 
-    let amount: Amount = 1000;
-    let duration = StakeDuration::ThreeMonths;
-    stake_and_verify_stake_info(
-        contract_address: staking_address,
-        staker_address: cfg.staker_address,
-        :token_address,
-        :amount,
-        :duration,
-        :version,
-    );
+    let stake_duration = StakeDuration::ThreeMonths;
+    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, :reward_cycle);
 
     cheat_caller_address_once(
-        contract_address: staking_address, caller_address: cfg.rewards_contract,
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
-    let total_points = staking_dispatcher.new_version();
-    assert!(total_points == amount * duration.get_multiplier().unwrap().into());
+    let total_points = staking_dispatcher.close_reward_cycle();
+    reward_cycle += 1;
+    assert!(total_points == amount * stake_duration.get_multiplier().unwrap().into());
+    let loaded_current_reward_cycle = load_value::<
+        Cycle,
+    >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
+    assert!(loaded_current_reward_cycle == reward_cycle);
 }
