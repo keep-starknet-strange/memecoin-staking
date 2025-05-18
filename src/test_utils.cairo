@@ -46,7 +46,7 @@ pub fn deploy_memecoin_staking_contract(ref cfg: TestCfg) -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_mock_erc20_contract(ref cfg: TestCfg) -> ContractAddress {
+pub fn deploy_mock_erc20_contract(owner: ContractAddress) -> ContractAddress {
     // TODO: Use
     // https://foundry-rs.github.io/starknet-foundry/testing/using-cheatcodes.html?highlight=set_balance#cheating-erc-20-token-balance
     let mut calldata = ArrayTrait::new();
@@ -55,12 +55,11 @@ pub fn deploy_mock_erc20_contract(ref cfg: TestCfg) -> ContractAddress {
     name.serialize(ref output: calldata);
     symbol.serialize(ref output: calldata);
     INITIAL_SUPPLY.serialize(ref output: calldata);
-    cfg.owner.serialize(ref output: calldata);
+    owner.serialize(ref output: calldata);
 
     let erc20_contract = declare(contract: "DualCaseERC20Mock").unwrap().contract_class();
     let (contract_address, _) = erc20_contract.deploy(constructor_calldata: @calldata).unwrap();
 
-    cfg.token_address = contract_address;
     contract_address
 }
 
@@ -102,24 +101,4 @@ pub fn verify_stake_info(
     assert!(stake_info.get_amount() == amount);
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
-}
-
-pub fn stake_and_verify_stake_info(
-    cfg: @TestCfg, amount: Amount, stake_duration: StakeDuration, stake_count: u8,
-) {
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
-    let stake_index = approve_and_stake(
-        :cfg, staker_address: *cfg.staker_address, :amount, :stake_duration,
-    );
-    cheat_caller_address_once(
-        contract_address: *cfg.staking_contract, caller_address: *cfg.staker_address,
-    );
-    let stake_info = staking_dispatcher.get_stake_info();
-    verify_stake_info(
-        stake_info: stake_info.at(index: stake_count.into()),
-        index: stake_index,
-        reward_cycle: 0,
-        :amount,
-        :stake_duration,
-    );
 }
