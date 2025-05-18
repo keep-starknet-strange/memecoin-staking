@@ -15,8 +15,10 @@ pub trait IMemeCoinStaking<TContractState> {
     /// Returns the `stake_index`.
     fn stake(ref self: TContractState, amount: Amount, stake_duration: StakeDuration) -> Index;
 
-    /// Get info for all stakes for the caller.
-    fn get_stake_info(self: @TContractState) -> Span<StakeInfo>;
+    /// Get info for a specific stake for the caller.
+    fn get_stake_info(
+        self: @TContractState, stake_duration: StakeDuration, stake_index: Index,
+    ) -> Option<StakeInfo>;
 }
 
 /// Different stake durations.
@@ -58,39 +60,6 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
             StakeDuration::ThreeMonths => Some(Self::THREE_MONTHS_MULTIPLIER),
             StakeDuration::SixMonths => Some(Self::SIX_MONTHS_MULTIPLIER),
             StakeDuration::TwelveMonths => Some(Self::TWELVE_MONTHS_MULTIPLIER),
-        }
-    }
-}
-
-/// Iterator over all stake duration options.
-#[derive(Drop)]
-struct StakeDurationIter {
-    stake_duration: StakeDuration,
-}
-
-#[generate_trait]
-pub(crate) impl StakeDurationIterImpl of StakeDurationIterTrait {
-    fn new() -> StakeDurationIter {
-        StakeDurationIter { stake_duration: StakeDuration::OneMonth }
-    }
-}
-
-pub(crate) impl StakeDurationIteratorImpl of Iterator<StakeDurationIter> {
-    type Item = StakeDuration;
-
-    fn next(ref self: StakeDurationIter) -> Option<StakeDuration> {
-        let prev = self.stake_duration;
-        match self.stake_duration {
-            StakeDuration::OneMonth => { self.stake_duration = StakeDuration::ThreeMonths; },
-            StakeDuration::ThreeMonths => { self.stake_duration = StakeDuration::SixMonths; },
-            StakeDuration::SixMonths => { self.stake_duration = StakeDuration::TwelveMonths; },
-            StakeDuration::TwelveMonths => { self.stake_duration = StakeDuration::None; },
-            StakeDuration::None => (),
-        }
-        if prev == StakeDuration::None {
-            None
-        } else {
-            Some(prev)
         }
     }
 }

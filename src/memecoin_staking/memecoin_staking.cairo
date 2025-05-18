@@ -1,8 +1,8 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
     use memecoin_staking::memecoin_staking::interface::{
-        IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationIterTrait,
-        StakeDurationTrait, StakeInfo, StakeInfoImpl,
+        IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
+        StakeInfoImpl,
     };
     use memecoin_staking::types::{Amount, Cycle, Index};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -70,17 +70,22 @@ pub mod MemeCoinStaking {
             index
         }
 
-        fn get_stake_info(self: @ContractState) -> Span<StakeInfo> {
+        fn get_stake_info(
+            self: @ContractState, stake_duration: StakeDuration, stake_index: Index,
+        ) -> Option<StakeInfo> {
             let staker_address = get_caller_address();
-            let mut result = array![];
-            let staker_info = self.staker_info.entry(key: staker_address);
-            for duration in StakeDurationIterTrait::new() {
-                let stakes = staker_info.stake_info.entry(key: duration);
-                for i in 0..stakes.len() {
-                    result.append(value: stakes.at(index: i).read());
+            let stakes = self
+                .staker_info
+                .entry(key: staker_address)
+                .stake_info
+                .entry(key: stake_duration);
+            for i in 0..stakes.len() {
+                let stake = stakes.at(index: i).read();
+                if (stake.get_index() == stake_index) {
+                    return Some(stake);
                 }
             }
-            result.span()
+            None
         }
     }
 
