@@ -121,12 +121,12 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         StakeInfo { index, reward_cycle, amount, vesting_time }
     }
 
-    fn get_id(self: @StakeInfo) -> Index {
-        *self.id
+    fn get_index(self: @StakeInfo) -> Index {
+        *self.index
     }
 
-    fn get_version(self: @StakeInfo) -> Version {
-        *self.version
+    fn get_reward_cycle(self: @StakeInfo) -> Cycle {
+        *self.reward_cycle
     }
 
     fn get_amount(self: @StakeInfo) -> Amount {
