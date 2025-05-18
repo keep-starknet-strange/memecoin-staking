@@ -68,17 +68,17 @@ fn test_stake() {
 
     let amount: Amount = 1000;
     let duration = StakeDuration::OneMonth;
-    let stake_id = approve_and_stake(
+    let stake_index = approve_and_stake(
         cfg: @cfg, staker_address: cfg.staker_address, :amount, :duration,
     );
-    assert!(stake_id == 0);
+    assert!(stake_index == 0);
 
     let amount: Amount = 1000;
     let duration = StakeDuration::ThreeMonths;
-    let stake_id = approve_and_stake(
+    let stake_index = approve_and_stake(
         cfg: @cfg, staker_address: cfg.staker_address, :amount, :duration,
     );
-    assert!(stake_id == 1);
+    assert!(stake_index == 1);
 
     let loaded_current_reward_cycle = load_value::<
         Cycle,

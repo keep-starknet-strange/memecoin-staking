@@ -23,9 +23,9 @@ pub mod MemeCoinStaking {
         rewards_contract: ContractAddress,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, StakerInfo>,
-        /// Stores the total points for each reward_cycle.
+        /// Stores the total points for each `reward_cycle`.
         total_points_per_reward_cycle: Vec<u128>,
-        /// The current reward_cycle number.
+        /// The current `reward_cycle` number.
         current_reward_cycle: Cycle,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
@@ -33,7 +33,7 @@ pub mod MemeCoinStaking {
 
     #[starknet::storage_node]
     struct StakerInfo {
-        /// The running index for the stake IDs.
+        /// The running index for the stakes, unique to the staker.
         stake_index: Index,
         /// The stake info for each stake duration.
         stake_info: Map<StakeDuration, Vec<StakeInfo>>,
@@ -86,7 +86,7 @@ pub mod MemeCoinStaking {
             amount: Amount,
         ) -> Index {
             let mut stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
-            let stake_info = StakeInfoImpl::new(id: stake_index, :reward_cycle, :amount, :duration);
+            let stake_info = StakeInfoImpl::new(index: stake_index, :reward_cycle, :amount, :duration);
             self.staker_info.entry(key: staker_address).stake_index.add_and_write(value: 1);
             self.push_stake_info(:staker_address, :duration, :stake_info);
             // TODO: Emit event.
