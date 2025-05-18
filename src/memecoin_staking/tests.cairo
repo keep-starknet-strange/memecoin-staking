@@ -88,56 +88,54 @@ fn test_stake() {
 
 #[test]
 fn test_get_stake_info() {
-    let cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
-    let contract_address = deploy_memecoin_staking_contract(owner: cfg.owner, :token_address);
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address };
+    let mut cfg: TestCfg = Default::default();
+    deploy_mock_erc20_contract(ref :cfg);
+    deploy_memecoin_staking_contract(ref :cfg);
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    cheat_caller_address_once(contract_address: token_address, caller_address: cfg.staker_address);
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: 2000);
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
     let stake_info = staking_dispatcher.get_stake_info();
     assert!(stake_info.len() == 0);
 
     let amount: Amount = 1000;
-    let duration = StakeDuration::OneMonth;
+    let stake_duration = StakeDuration::OneMonth;
     stake_and_verify_stake_info(
-        :contract_address,
-        staker_address: cfg.staker_address,
-        :token_address,
+        cfg: @cfg,
         :amount,
-        :duration,
+        :stake_duration,
         stake_count: 0,
     );
 
     let amount: Amount = 500;
-    let duration = StakeDuration::ThreeMonths;
+    let stake_duration = StakeDuration::ThreeMonths;
     stake_and_verify_stake_info(
-        :contract_address,
-        staker_address: cfg.staker_address,
-        :token_address,
+        cfg: @cfg,
         :amount,
-        :duration,
+        :stake_duration,
         stake_count: 1,
     );
 
     let amount: Amount = 250;
-    let duration = StakeDuration::SixMonths;
+    let stake_duration = StakeDuration::SixMonths;
     stake_and_verify_stake_info(
-        :contract_address,
-        staker_address: cfg.staker_address,
-        :token_address,
+        cfg: @cfg,
         :amount,
-        :duration,
+        :stake_duration,
         stake_count: 2,
     );
 
     let amount: Amount = 125;
-    let duration = StakeDuration::TwelveMonths;
+    let stake_duration = StakeDuration::TwelveMonths;
     stake_and_verify_stake_info(
-        :contract_address,
-        staker_address: cfg.staker_address,
-        :token_address,
+        cfg: @cfg,
         :amount,
-        :duration,
+        :stake_duration,
         stake_count: 3,
     );
 }
@@ -178,4 +176,3 @@ fn test_stake_insufficient_balance() {
     );
     staking_dispatcher.stake(amount: amount.try_into().unwrap(), :stake_duration);
 }
-
