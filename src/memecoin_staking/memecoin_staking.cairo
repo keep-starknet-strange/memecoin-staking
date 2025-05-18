@@ -90,19 +90,23 @@ pub mod MemeCoinStaking {
             None
         }
 
-        fn new_version(ref self: ContractState) -> Amount {
+        fn close_reward_cycle(ref self: ContractState) -> Amount {
             assert!(
                 get_caller_address() == self.rewards_contract.read(),
                 "Can only be called by the rewards contract",
             );
-            let curr_version = self.current_version.read();
-            let total_points = self.points_info.at(index: curr_version.into()).read();
-            assert!(total_points > 0, "Can't close version with no stakes");
-            self.current_version.add_and_write(value: 1);
-            self.points_info.push(value: 0);
+            let curr_reward_cycle = self.current_reward_cycle.read();
+            let total_points = self
+                .total_points_per_reward_cycle
+                .at(index: curr_reward_cycle.into())
+                .read();
+            assert!(total_points > 0, "Can't close reward cycle with no stakes");
+            self.current_reward_cycle.add_and_write(value: 1);
+            self.total_points_per_reward_cycle.push(value: 0);
             assert!(
-                self.points_info.len() == self.current_version.read().into() + 1,
-                "Invalid points info length",
+                self.total_points_per_reward_cycle.len() == self.current_reward_cycle.read().into()
+                    + 1,
+                "Invalid total points per reward cycle length",
             );
             total_points
         }
