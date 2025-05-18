@@ -65,7 +65,7 @@ fn test_stake() {
 
     let staker_supply: Amount = 2000;
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
-    token_dispatcher.transfer(recipient: cfg.staker_address, amount: 2000);
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
 
     let amount: Amount = staker_supply / 2;
     let stake_duration = StakeDuration::OneMonth;
