@@ -3,7 +3,7 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    INITIAL_SUPPLY, TestCfg, approve_and_stake, deploy_memecoin_staking_contract,
+    TestCfg, approve_and_stake, deploy_memecoin_staking_contract,
     deploy_mock_erc20_contract, load_value,
 };
 use memecoin_staking::types::{Amount, Cycle};
@@ -111,7 +111,7 @@ fn test_stake_insufficient_balance() {
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    let amount: u256 = INITIAL_SUPPLY + 1;
+    let amount: u256 = 1;
     let stake_duration = StakeDuration::OneMonth;
     cheat_caller_address_once(
         contract_address: cfg.token_address, caller_address: cfg.staker_address,
