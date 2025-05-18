@@ -6,7 +6,7 @@ use memecoin_staking::memecoin_staking::interface::{
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
+    ContractClassTrait, DeclareResultTrait, declare, load,
 };
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
@@ -127,37 +127,27 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
     cfg
 }
 
-pub fn stake_and_verify_stake_info(
-    contract_address: ContractAddress,
-    staker_address: ContractAddress,
-    token_address: ContractAddress,
-    amount: Amount,
-    duration: StakeDuration,
-    stake_count: u8,
-) {
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: contract_address };
-    let stake_id = approve_and_stake(
-        token_dispatcher: @token_dispatcher,
-        staking_dispatcher: @staking_dispatcher,
-        :staker_address,
-        :amount,
-        :duration,
+pub fn stake_and_verify_stake_info(cfg: @TestCfg, amount: Amount, stake_duration: StakeDuration, reward_cycle: Cycle) {
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
+    let stake_index = approve_and_stake(
+        :cfg, staker_address: *cfg.staker_address, :amount, :stake_duration,
     );
-    cheat_caller_address_once(:contract_address, caller_address: staker_address);
+    cheat_caller_address_once(
+        contract_address: *cfg.staking_contract, caller_address: *cfg.staker_address,
+    );
     let stake_info = staking_dispatcher.get_stake_info();
     verify_stake_info(
-        stake_info: stake_info.at(index: stake_count.into()),
-        id: stake_id,
-        version: 0,
+        stake_info: find_stake_by_index(stake_info: @stake_info, index: stake_index).unwrap(),
+        index: stake_index,
+        :reward_cycle,
         :amount,
-        :duration,
+        :stake_duration,
     );
 }
 
-pub fn find_stake_by_id(stake_info: @Span<StakeInfo>, id: Index) -> Option<@StakeInfo> {
+pub fn find_stake_by_index(stake_info: @Span<StakeInfo>, index: Index) -> Option<@StakeInfo> {
     for i in 0..stake_info.len() {
-        if stake_info.at(index: i).get_id() == id {
+        if stake_info.at(index: i).get_index() == index {
             return Some(stake_info.at(index: i));
         }
     }
