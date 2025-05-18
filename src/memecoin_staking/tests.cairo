@@ -7,7 +7,7 @@ use memecoin_staking::test_utils::{
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use starkware_utils::test_utils::cheat_caller_address_once;
+use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
 fn test_constructor() {
