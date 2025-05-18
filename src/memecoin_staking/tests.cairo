@@ -109,79 +109,105 @@ fn test_get_stake_info() {
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
 
-    cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
-    );
-    let stake_info = staking_dispatcher.get_stake_info();
-    assert!(stake_info.len() == 0);
-
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::OneMonth;
-    approve_and_stake(cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
+    let stake_index = approve_and_stake(
+        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+    );
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let stake_info = staking_dispatcher.get_stake_info();
-    assert!(stake_info.len() == 1);
+    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
     verify_stake_info(
-        stake_info: stake_info.at(index: 0),
-        stake_index: 0,
-        reward_cycle: 0,
-        :amount,
-        :stake_duration,
+        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
     );
 
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::ThreeMonths;
-    approve_and_stake(cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
+    let stake_index = approve_and_stake(
+        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+    );
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let stake_info = staking_dispatcher.get_stake_info();
-    assert!(stake_info.len() == 2);
+    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
     verify_stake_info(
-        stake_info: stake_info.at(index: 1),
-        stake_index: 1,
-        reward_cycle: 0,
-        :amount,
-        :stake_duration,
+        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
     );
 
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::SixMonths;
-    approve_and_stake(cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
+    let stake_index = approve_and_stake(
+        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+    );
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let stake_info = staking_dispatcher.get_stake_info();
-    assert!(stake_info.len() == 3);
+    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
     verify_stake_info(
-        stake_info: stake_info.at(index: 2),
-        stake_index: 2,
-        reward_cycle: 0,
-        :amount,
-        :stake_duration,
+        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
     );
 
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::TwelveMonths;
-    approve_and_stake(cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
+    let stake_index = approve_and_stake(
+        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+    );
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let stake_info = staking_dispatcher.get_stake_info();
-    assert!(stake_info.len() == 4);
+    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
     verify_stake_info(
-        stake_info: stake_info.at(index: 3),
-        stake_index: 3,
-        reward_cycle: 0,
-        :amount,
-        :stake_duration,
+        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
     );
+}
+
+#[test]
+fn test_get_stake_info_not_exist() {
+    let mut cfg: TestCfg = Default::default();
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    deploy_memecoin_staking_contract(ref :cfg);
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let staker_supply: Amount = 2000;
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(stake_duration: StakeDuration::OneMonth, stake_index: 0);
+    assert!(stake_info.is_none());
+
+    let amount: Amount = staker_supply;
+    let stake_duration = StakeDuration::OneMonth;
+    let stake_index = approve_and_stake(
+        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+    );
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index);
+    assert!(stake_info.is_some());
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(stake_duration: StakeDuration::OneMonth, stake_index: 1);
+    assert!(stake_info.is_none());
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(stake_duration: StakeDuration::ThreeMonths, stake_index: 0);
+    assert!(stake_info.is_none());
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(stake_duration: StakeDuration::SixMonths, stake_index: 0);
+    assert!(stake_info.is_none());
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(stake_duration: StakeDuration::TwelveMonths, stake_index: 0);
+    assert!(stake_info.is_none());
 }
 
 #[test]
