@@ -105,39 +105,19 @@ fn test_get_stake_info() {
 
     let amount: Amount = 1000;
     let stake_duration = StakeDuration::OneMonth;
-    stake_and_verify_stake_info(
-        cfg: @cfg,
-        :amount,
-        :stake_duration,
-        stake_count: 0,
-    );
+    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, stake_count: 0);
 
     let amount: Amount = 500;
     let stake_duration = StakeDuration::ThreeMonths;
-    stake_and_verify_stake_info(
-        cfg: @cfg,
-        :amount,
-        :stake_duration,
-        stake_count: 1,
-    );
+    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, stake_count: 1);
 
     let amount: Amount = 250;
     let stake_duration = StakeDuration::SixMonths;
-    stake_and_verify_stake_info(
-        cfg: @cfg,
-        :amount,
-        :stake_duration,
-        stake_count: 2,
-    );
+    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, stake_count: 2);
 
     let amount: Amount = 125;
     let stake_duration = StakeDuration::TwelveMonths;
-    stake_and_verify_stake_info(
-        cfg: @cfg,
-        :amount,
-        :stake_duration,
-        stake_count: 3,
-    );
+    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, stake_count: 3);
 }
 
 #[test]
