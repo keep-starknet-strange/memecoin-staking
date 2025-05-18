@@ -1,11 +1,5 @@
-use memecoin_staking::memecoin_staking::interface::{
-    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
-};
-use memecoin_staking::types::{Amount, Index};
-use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
 use starknet::{ContractAddress, Store};
-use starkware_utils::test_utils::cheat_caller_address_once;
 
 pub const INITIAL_SUPPLY: u256 = 100000;
 
@@ -44,7 +38,7 @@ pub fn deploy_memecoin_staking_contract(ref cfg: TestCfg) -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_mock_erc20_contract(ref cfg: TestCfg) -> ContractAddress {
+pub fn deploy_mock_erc20_contract(owner: ContractAddress) -> ContractAddress {
     // TODO: Use
     // https://foundry-rs.github.io/starknet-foundry/testing/using-cheatcodes.html?highlight=set_balance#cheating-erc-20-token-balance
     let mut calldata = ArrayTrait::new();
@@ -53,12 +47,11 @@ pub fn deploy_mock_erc20_contract(ref cfg: TestCfg) -> ContractAddress {
     name.serialize(ref output: calldata);
     symbol.serialize(ref output: calldata);
     INITIAL_SUPPLY.serialize(ref output: calldata);
-    cfg.owner.serialize(ref output: calldata);
+    owner.serialize(ref output: calldata);
 
     let erc20_contract = declare(contract: "DualCaseERC20Mock").unwrap().contract_class();
     let (contract_address, _) = erc20_contract.deploy(constructor_calldata: @calldata).unwrap();
 
-    cfg.token_address = contract_address;
     contract_address
 }
 
@@ -68,19 +61,4 @@ pub fn load_value<T, +Serde<T>, +Store<T>>(
     let size = Store::<T>::size().into();
     let mut loaded_value = load(target: contract_address, :storage_address, :size).span();
     Serde::deserialize(ref serialized: loaded_value).unwrap()
-}
-
-pub fn approve_and_stake(
-    cfg: @TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
-) -> Index {
-    let token_dispatcher = IERC20Dispatcher { contract_address: *cfg.token_address };
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
-    cheat_caller_address_once(
-        contract_address: token_dispatcher.contract_address, caller_address: staker_address,
-    );
-    token_dispatcher.approve(spender: staking_dispatcher.contract_address, amount: amount.into());
-    cheat_caller_address_once(
-        contract_address: staking_dispatcher.contract_address, caller_address: staker_address,
-    );
-    staking_dispatcher.stake(:amount, :stake_duration)
 }

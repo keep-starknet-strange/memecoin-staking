@@ -3,8 +3,7 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value,
+    TestCfg, deploy_memecoin_staking_contract, deploy_mock_erc20_contract, load_value,
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -59,25 +58,36 @@ fn test_set_rewards_contract_wrong_caller() {
 #[test]
 fn test_stake() {
     let mut cfg: TestCfg = Default::default();
-    deploy_mock_erc20_contract(ref :cfg);
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
+    let staker_supply: Amount = 2000;
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: 2000);
 
-    let amount: Amount = 1000;
+    let amount: Amount = staker_supply / 2;
     let stake_duration = StakeDuration::OneMonth;
-    let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+    cheat_caller_address_once(
+        contract_address: cfg.token_address, caller_address: cfg.staker_address,
     );
+    token_dispatcher.approve(spender: cfg.staking_contract, amount: amount.into());
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 0);
 
-    let amount: Amount = 1000;
     let stake_duration = StakeDuration::ThreeMonths;
-    let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+    cheat_caller_address_once(
+        contract_address: cfg.token_address, caller_address: cfg.staker_address,
     );
+    token_dispatcher.approve(spender: cfg.staking_contract, amount: amount.into());
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 1);
 
     let loaded_current_reward_cycle = load_value::<
@@ -90,7 +100,7 @@ fn test_stake() {
 #[should_panic(expected: 'ERC20: insufficient allowance')]
 fn test_stake_without_approve() {
     let mut cfg: TestCfg = Default::default();
-    deploy_mock_erc20_contract(ref :cfg);
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
@@ -106,7 +116,7 @@ fn test_stake_without_approve() {
 #[should_panic(expected: 'ERC20: insufficient balance')]
 fn test_stake_insufficient_balance() {
     let mut cfg: TestCfg = Default::default();
-    deploy_mock_erc20_contract(ref :cfg);
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
@@ -116,7 +126,7 @@ fn test_stake_insufficient_balance() {
     cheat_caller_address_once(
         contract_address: cfg.token_address, caller_address: cfg.staker_address,
     );
-    token_dispatcher.approve(spender: cfg.staking_contract, amount: amount);
+    token_dispatcher.approve(spender: cfg.staking_contract, :amount);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
