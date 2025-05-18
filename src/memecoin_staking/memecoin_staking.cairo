@@ -63,13 +63,8 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
         fn stake(ref self: ContractState, amount: Amount, stake_duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
-            let reward_cycle = self.current_reward_cycle.read();
-            let multiplier = stake_duration.get_multiplier();
-            assert!(multiplier.is_some(), "Invalid stake duration");
-            let points = amount * multiplier.unwrap().into();
-            let stake_index = self
-                .update_staker_info(:staker_address, :stake_duration, :reward_cycle, :amount);
-            self.update_total_points_per_reward_cycle(:reward_cycle, :points);
+            let stake_index = self.update_staker_info(:staker_address, :stake_duration, :amount);
+            self.update_total_points_per_reward_cycle(:amount, :stake_duration);
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
             stake_index
@@ -82,10 +77,10 @@ pub mod MemeCoinStaking {
             ref self: ContractState,
             staker_address: ContractAddress,
             stake_duration: StakeDuration,
-            reward_cycle: Cycle,
             amount: Amount,
         ) -> Index {
-            let mut stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
+            let stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
+            let reward_cycle = self.current_reward_cycle.read();
             let stake_info = StakeInfoImpl::new(
                 index: stake_index, :reward_cycle, :amount, :stake_duration,
             );
@@ -110,8 +105,12 @@ pub mod MemeCoinStaking {
         }
 
         fn update_total_points_per_reward_cycle(
-            ref self: ContractState, reward_cycle: Cycle, points: Amount,
+            ref self: ContractState, amount: Amount, stake_duration: StakeDuration,
         ) {
+            let multiplier = stake_duration.get_multiplier();
+            assert!(multiplier.is_some(), "Invalid stake duration");
+            let points = amount * multiplier.unwrap().into();
+            let reward_cycle = self.current_reward_cycle.read();
             self
                 .total_points_per_reward_cycle
                 .at(index: reward_cycle.into())
