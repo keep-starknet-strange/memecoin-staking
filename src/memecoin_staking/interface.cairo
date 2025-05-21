@@ -15,7 +15,7 @@ pub trait IMemeCoinStaking<TContractState> {
     /// Returns the `stake_index`.
     fn stake(ref self: TContractState, amount: Amount, stake_duration: StakeDuration) -> Index;
 
-    /// Get info for a specific stake for the caller.
+    /// Get info for a specific stake for `staker_address`.
     fn get_stake_info(
         self: @TContractState,
         staker_address: ContractAddress,
