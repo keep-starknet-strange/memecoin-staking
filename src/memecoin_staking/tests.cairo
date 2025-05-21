@@ -3,8 +3,8 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value, verify_stake_info, memecoin_staking_test_setup, STAKER_SUPPLY,
+    STAKER_SUPPLY, TestCfg, approve_and_stake, deploy_memecoin_staking_contract,
+    deploy_mock_erc20_contract, load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -167,7 +167,9 @@ fn test_get_stake_info_different_durations() {
         let stake_index = *stake_indexes.at(i);
         let amount = *stake_amounts.at(i);
         let stake_duration = *stake_durations.at(i);
-        let stake_info = staking_dispatcher.get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index).unwrap();
+        let stake_info = staking_dispatcher
+            .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
+            .unwrap();
         verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
     }
 }
@@ -209,25 +211,19 @@ fn test_get_stake_info_not_exist() {
 
     // Verify that the stake info does not exist for other stake durations.
     let stake_durations = array![
-        StakeDuration::ThreeMonths,
-        StakeDuration::SixMonths,
-        StakeDuration::TwelveMonths,
+        StakeDuration::ThreeMonths, StakeDuration::SixMonths, StakeDuration::TwelveMonths,
     ];
     for i in 0..stake_durations.len() {
         let stake_duration = *stake_durations.at(i);
         let stake_info = staking_dispatcher
             .get_stake_info(
-                staker_address: cfg.staker_address,
-                stake_duration: stake_duration,
-                stake_index: 0,
+                staker_address: cfg.staker_address, stake_duration: stake_duration, stake_index: 0,
             );
         assert!(stake_info.is_none());
 
         let stake_info = staking_dispatcher
             .get_stake_info(
-                staker_address: cfg.staker_address,
-                stake_duration: stake_duration,
-                stake_index: 1,
+                staker_address: cfg.staker_address, stake_duration: stake_duration, stake_index: 1,
             );
         assert!(stake_info.is_none());
     }

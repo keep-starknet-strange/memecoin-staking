@@ -110,7 +110,9 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
     cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
-    let config_dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher {
+        contract_address: cfg.staking_contract,
+    };
     cheat_caller_address_once(
         contract_address: config_dispatcher.contract_address, caller_address: cfg.owner,
     );
