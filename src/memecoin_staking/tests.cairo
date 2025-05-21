@@ -4,7 +4,7 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value, stake_and_verify_stake_info, verify_stake_info,
+    load_value, set_rewards_contract, stake_and_verify_stake_info, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -332,4 +332,62 @@ fn test_close_reward_cycle() {
         Cycle,
     >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
     assert!(loaded_current_reward_cycle == reward_cycle);
+}
+
+#[test]
+fn test_query_points() {
+    // Setup.
+    let mut cfg: TestCfg = Default::default();
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    deploy_memecoin_staking_contract(ref :cfg);
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    set_rewards_contract(:cfg);
+
+    // Transfer to staker.
+    let staker_supply: Amount = 10000;
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
+
+    // Stake and verify points.
+    let amount: Amount = staker_supply / 2;
+    let stake_duration = StakeDuration::OneMonth;
+    approve_and_stake(:cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
+
+    let mut points = amount * stake_duration.get_multiplier().unwrap().into();
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    let points_info = staking_dispatcher.query_points(reward_cycle: 0);
+    assert!(points_info == points);
+
+    // Close reward cycle and verify points.
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
+    );
+    let total_points = staking_dispatcher.close_reward_cycle();
+    assert!(total_points == points);
+
+    // Stake and verify points for both reward cycles.
+    let amount: Amount = staker_supply / 2;
+    let stake_duration = StakeDuration::ThreeMonths;
+    approve_and_stake(:cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
+
+    let new_version_points = amount * stake_duration.get_multiplier().unwrap().into();
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    let points_info = staking_dispatcher.query_points(reward_cycle: 0);
+    assert!(points_info == points);
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    let points_info = staking_dispatcher.query_points(reward_cycle: 1);
+    assert!(points_info == new_version_points);
+}
+
+#[test]
+#[should_panic(expected: "Reward cycle number is too high")]
+fn test_query_points_high_reward_cycle() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_memecoin_staking_contract(ref :cfg);
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    staking_dispatcher.query_points(reward_cycle: 1);
 }

@@ -110,6 +110,13 @@ pub mod MemeCoinStaking {
             );
             total_points
         }
+
+        fn query_points(self: @ContractState, reward_cycle: Cycle) -> u128 {
+            assert!(
+                reward_cycle <= self.current_reward_cycle.read(), "Reward cycle number is too high",
+            );
+            self.total_points_per_reward_cycle.at(index: reward_cycle.into()).read()
+        }
     }
 
     #[generate_trait]
