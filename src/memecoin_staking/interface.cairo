@@ -14,10 +14,18 @@ pub trait IMemeCoinStaking<TContractState> {
     /// Stakes the specified amount of meme coin for the specified `stake_duration`.
     /// Returns the `stake_index`.
     fn stake(ref self: TContractState, amount: Amount, stake_duration: StakeDuration) -> Index;
+
+    /// Get info for a specific stake for `staker_address`.
+    fn get_stake_info(
+        self: @TContractState,
+        staker_address: ContractAddress,
+        stake_duration: StakeDuration,
+        stake_index: Index,
+    ) -> Option<StakeInfo>;
 }
 
 /// Different stake durations.
-#[derive(starknet::Store, Drop, Hash, Serde, Copy)]
+#[derive(starknet::Store, Drop, Hash, Serde, Copy, PartialEq)]
 pub enum StakeDuration {
     #[default]
     None,
@@ -60,7 +68,7 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
 }
 
 /// Stake info for each stake.
-#[derive(starknet::Store, Drop)]
+#[derive(starknet::Store, Drop, Serde)]
 pub struct StakeInfo {
     /// The stake index (unique to the staker, used for unstaking).
     index: Index,
@@ -83,5 +91,21 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         assert!(time_delta.is_some(), "Invalid stake duration");
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
         StakeInfo { index, reward_cycle, amount, vesting_time }
+    }
+
+    fn get_index(self: @StakeInfo) -> Index {
+        *self.index
+    }
+
+    fn get_reward_cycle(self: @StakeInfo) -> Cycle {
+        *self.reward_cycle
+    }
+
+    fn get_amount(self: @StakeInfo) -> Amount {
+        *self.amount
+    }
+
+    fn get_vesting_time(self: @StakeInfo) -> Timestamp {
+        *self.vesting_time
     }
 }
