@@ -35,15 +35,16 @@ fn test_constructor() {
 fn test_set_rewards_contract() {
     let mut cfg: TestCfg = Default::default();
     deploy_memecoin_staking_contract(ref :cfg);
+    let rewards_contract = cfg.rewards_contract;
     let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
 
     cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
-    dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
+    dispatcher.set_rewards_contract(:rewards_contract);
 
     let loaded_rewards_contract = load_value(
         contract_address: cfg.staking_contract, storage_address: selector!("rewards_contract"),
     );
-    assert!(loaded_rewards_contract == cfg.rewards_contract);
+    assert!(loaded_rewards_contract == rewards_contract);
 }
 
 #[test]
@@ -51,9 +52,10 @@ fn test_set_rewards_contract() {
 fn test_set_rewards_contract_wrong_caller() {
     let mut cfg: TestCfg = Default::default();
     deploy_memecoin_staking_contract(ref :cfg);
+    let rewards_contract = cfg.rewards_contract;
     let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
 
-    dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
+    dispatcher.set_rewards_contract(:rewards_contract);
 }
 
 #[test]
