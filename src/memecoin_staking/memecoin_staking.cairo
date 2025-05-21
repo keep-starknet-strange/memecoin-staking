@@ -82,9 +82,9 @@ pub mod MemeCoinStaking {
                 .stake_info
                 .entry(key: stake_duration);
             for i in 0..stakes.len() {
-                let stake = stakes.at(index: i).read();
-                if (stake.get_index() == stake_index) {
-                    return Some(stake);
+                let stake_info = stakes.at(index: i).read();
+                if (stake_info.get_index() == stake_index) {
+                    return Some(stake_info);
                 }
             }
             None
