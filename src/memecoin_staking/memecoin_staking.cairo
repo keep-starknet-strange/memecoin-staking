@@ -53,7 +53,7 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             // TODO: Create errors file and use it here.
-            assert!(self.caller_is_owner(), "Can only be called by the owner");
+            assert!(get_caller_address() == self.owner.read(), "Can only be called by the owner");
             self.rewards_contract.write(value: rewards_contract);
             // TODO: Emit event.
         }
@@ -111,27 +111,11 @@ pub mod MemeCoinStaking {
             total_points
         }
 
-        fn new_version(ref self: ContractState) -> Amount {
+        fn query_points(self: @ContractState, reward_cycle: Cycle) -> u128 {
             assert!(
-                self.caller_is_rewards_contract(), "Can only be called by the rewards contract",
+                reward_cycle <= self.current_reward_cycle.read(), "Reward cycle number is too high",
             );
-            let curr_version = self.current_version.read();
-            let total_points = self
-                .points_info
-                .get(curr_version.into())
-                .unwrap()
-                .read()
-                .total_points;
-            assert!(total_points > 0, "Can't close version with no stakes");
-            self.current_version.add_and_write(value: 1);
-            self.points_info.push(value: 0);
-            total_points
-        }
-
-        fn query_points(self: @ContractState, version: Version) -> u128 {
-            assert!(self.caller_is_owner(), "Only callable by the owner");
-            assert!(version <= self.current_version.read(), "Version number is too high");
-            self.points_info.at(version.into()).read()
+            self.total_points_per_reward_cycle.at(index: reward_cycle.into()).read()
         }
     }
 
