@@ -76,14 +76,13 @@ pub fn load_value<T, +Serde<T>, +Store<T>>(
 pub fn approve_and_stake(
     cfg: TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
 ) -> Index {
-    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let token_address = cfg.token_address;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
-    cheat_caller_address_once(
-        contract_address: token_dispatcher.contract_address, caller_address: staker_address,
+    cheat_and_approve(
+        :token_address, approver: staker_address, spender: cfg.staking_contract, :amount,
     );
-    token_dispatcher.approve(spender: staking_dispatcher.contract_address, amount: amount.into());
     cheat_caller_address_once(
-        contract_address: staking_dispatcher.contract_address, caller_address: staker_address,
+        contract_address: cfg.staking_contract, caller_address: staker_address,
     );
     staking_dispatcher.stake(:amount, :stake_duration)
 }
@@ -123,4 +122,15 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: STAKER_SUPPLY.into());
 
     cfg
+}
+
+pub fn cheat_and_approve(
+    token_address: ContractAddress,
+    approver: ContractAddress,
+    spender: ContractAddress,
+    amount: Amount,
+) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+    cheat_caller_address_once(contract_address: token_address, caller_address: approver);
+    token_dispatcher.approve(spender: spender, amount: amount.into());
 }
