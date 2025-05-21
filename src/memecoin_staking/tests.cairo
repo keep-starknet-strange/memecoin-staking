@@ -114,14 +114,14 @@ fn test_get_stake_info_same_duration() {
         let stake_index = approve_and_stake(
             :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
         );
-        stake_amounts.append(amount);
-        stake_indexes.append(stake_index);
+        stake_amounts.append(value: amount);
+        stake_indexes.append(value: stake_index);
     }
 
     // Verify the stake info for each stake.
     for i in 0..10_u32 {
-        let stake_index = *stake_indexes.at(i);
-        let amount = *stake_amounts.at(i);
+        let stake_index = *stake_indexes.at(index: i);
+        let amount = *stake_amounts.at(index: i);
         let stake_info = staking_dispatcher
             .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
             .unwrap();
@@ -154,19 +154,19 @@ fn test_get_stake_info_different_durations() {
     for i in 0..10_u32 {
         let amount = staker_balance / 2;
         staker_balance -= amount;
-        let stake_duration = *stake_durations.at(i);
+        let stake_duration = *stake_durations.at(index: i);
         let stake_index = approve_and_stake(
             :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
         );
-        stake_amounts.append(amount);
-        stake_indexes.append(stake_index);
+        stake_amounts.append(value: amount);
+        stake_indexes.append(value: stake_index);
     }
 
     // Verify the stake info for each stake.
     for i in 0..10_u32 {
-        let stake_index = *stake_indexes.at(i);
-        let amount = *stake_amounts.at(i);
-        let stake_duration = *stake_durations.at(i);
+        let stake_index = *stake_indexes.at(index: i);
+        let amount = *stake_amounts.at(index: i);
+        let stake_duration = *stake_durations.at(index: i);
         let stake_info = staking_dispatcher
             .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
             .unwrap();
@@ -214,7 +214,7 @@ fn test_get_stake_info_not_exist() {
         StakeDuration::ThreeMonths, StakeDuration::SixMonths, StakeDuration::TwelveMonths,
     ];
     for i in 0..stake_durations.len() {
-        let stake_duration = *stake_durations.at(i);
+        let stake_duration = *stake_durations.at(index: i);
         let stake_info = staking_dispatcher
             .get_stake_info(
                 staker_address: cfg.staker_address, stake_duration: stake_duration, stake_index: 0,
