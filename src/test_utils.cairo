@@ -1,4 +1,5 @@
 use memecoin_staking::memecoin_staking::interface::{
+    IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
     StakeInfo, StakeInfoTrait,
 };
@@ -10,6 +11,7 @@ use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 pub const INITIAL_SUPPLY: u256 = 100000;
+pub const STAKER_SUPPLY: Amount = (INITIAL_SUPPLY / 2).try_into().unwrap();
 
 #[derive(Drop, Copy)]
 pub struct TestCfg {
@@ -101,4 +103,22 @@ pub fn verify_stake_info(
     assert!(stake_info.get_amount() == amount);
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
+}
+
+pub fn memecoin_staking_test_setup() -> TestCfg {
+    let mut cfg: TestCfg = Default::default();
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    deploy_memecoin_staking_contract(ref :cfg);
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
+    cheat_caller_address_once(
+        contract_address: config_dispatcher.contract_address, caller_address: cfg.owner,
+    );
+    config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
+
+    // Transfer to staker.
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: STAKER_SUPPLY.into());
+
+    cfg
 }

@@ -4,7 +4,7 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value, verify_stake_info,
+    load_value, verify_stake_info, memecoin_staking_test_setup, STAKER_SUPPLY,
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -98,81 +98,86 @@ fn test_stake() {
 }
 
 #[test]
-fn test_get_stake_info() {
+fn test_get_stake_info_same_duration() {
     // Setup.
-    let mut cfg: TestCfg = Default::default();
-    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
-    deploy_memecoin_staking_contract(ref :cfg);
-    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let cfg = memecoin_staking_test_setup();
+    let mut staker_balance: Amount = STAKER_SUPPLY;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    // Transfer to staker.
-    let mut staker_supply: Amount = 2000;
-    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
-    token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
-
-    // Stake and verify one month.
-    let amount: Amount = staker_supply / 2;
-    staker_supply -= amount;
-    let stake_duration = StakeDuration::OneMonth;
-    let stake_index = approve_and_stake(
-        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
-    );
-    let stake_info = staking_dispatcher
-        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
-        .unwrap();
-    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
-
-    // Stake and verify three months.
-    let amount: Amount = staker_supply / 2;
-    staker_supply -= amount;
-    let stake_duration = StakeDuration::ThreeMonths;
-    let stake_index = approve_and_stake(
-        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
-    );
-    let stake_info = staking_dispatcher
-        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
-        .unwrap();
-    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
-
-    // Stake and verify six months.
-    let amount: Amount = staker_supply / 2;
-    staker_supply -= amount;
+    // Stake 10 times with different amounts.
     let stake_duration = StakeDuration::SixMonths;
-    let stake_index = approve_and_stake(
-        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
-    );
-    let stake_info = staking_dispatcher
-        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
-        .unwrap();
-    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
+    let mut stake_indexes = array![];
+    let mut stake_amounts = array![];
+    for _ in 0..10_u32 {
+        let amount = staker_balance / 3;
+        staker_balance -= amount;
+        let stake_index = approve_and_stake(
+            :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+        );
+        stake_amounts.append(amount);
+        stake_indexes.append(stake_index);
+    }
 
-    // Stake and verify twelve months.
-    let amount: Amount = staker_supply / 2;
-    staker_supply -= amount;
-    let stake_duration = StakeDuration::TwelveMonths;
-    let stake_index = approve_and_stake(
-        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
-    );
-    let stake_info = staking_dispatcher
-        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
-        .unwrap();
-    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
+    // Verify the stake info for each stake.
+    for i in 0..10_u32 {
+        let stake_index = *stake_indexes.at(i);
+        let amount = *stake_amounts.at(i);
+        let stake_info = staking_dispatcher
+            .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
+            .unwrap();
+        verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
+    }
+}
+
+#[test]
+fn test_get_stake_info_different_durations() {
+    // Setup.
+    let cfg = memecoin_staking_test_setup();
+    let mut staker_balance: Amount = STAKER_SUPPLY;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    // Stake 10 times with different amounts.
+    let stake_durations = array![
+        StakeDuration::OneMonth,
+        StakeDuration::ThreeMonths,
+        StakeDuration::OneMonth,
+        StakeDuration::TwelveMonths,
+        StakeDuration::SixMonths,
+        StakeDuration::TwelveMonths,
+        StakeDuration::SixMonths,
+        StakeDuration::ThreeMonths,
+        StakeDuration::ThreeMonths,
+        StakeDuration::SixMonths,
+    ];
+    let mut stake_amounts = array![];
+    let mut stake_indexes = array![];
+    for i in 0..10_u32 {
+        let amount = staker_balance / 2;
+        staker_balance -= amount;
+        let stake_duration = *stake_durations.at(i);
+        let stake_index = approve_and_stake(
+            :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+        );
+        stake_amounts.append(amount);
+        stake_indexes.append(stake_index);
+    }
+
+    // Verify the stake info for each stake.
+    for i in 0..10_u32 {
+        let stake_index = *stake_indexes.at(i);
+        let amount = *stake_amounts.at(i);
+        let stake_duration = *stake_durations.at(i);
+        let stake_info = staking_dispatcher.get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index).unwrap();
+        verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
+    }
 }
 
 #[test]
 fn test_get_stake_info_not_exist() {
     // Setup.
-    let mut cfg: TestCfg = Default::default();
-    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
-    deploy_memecoin_staking_contract(ref :cfg);
-    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let cfg = memecoin_staking_test_setup();
+    let mut staker_balance: Amount = STAKER_SUPPLY;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
-
-    // Transfer to staker.
-    let staker_supply: Amount = 2000;
-    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
-    token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
 
     // Verify that the stake info does not exist before staking.
     let stake_info = staking_dispatcher
@@ -184,7 +189,7 @@ fn test_get_stake_info_not_exist() {
     assert!(stake_info.is_none());
 
     // Stake and verify existence.
-    let amount: Amount = staker_supply;
+    let amount: Amount = staker_balance;
     let stake_duration = StakeDuration::OneMonth;
     let stake_index = approve_and_stake(
         :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
@@ -203,29 +208,29 @@ fn test_get_stake_info_not_exist() {
     assert!(stake_info.is_none());
 
     // Verify that the stake info does not exist for other stake durations.
-    let stake_info = staking_dispatcher
-        .get_stake_info(
-            staker_address: cfg.staker_address,
-            stake_duration: StakeDuration::ThreeMonths,
-            stake_index: 0,
-        );
-    assert!(stake_info.is_none());
+    let stake_durations = array![
+        StakeDuration::ThreeMonths,
+        StakeDuration::SixMonths,
+        StakeDuration::TwelveMonths,
+    ];
+    for i in 0..stake_durations.len() {
+        let stake_duration = *stake_durations.at(i);
+        let stake_info = staking_dispatcher
+            .get_stake_info(
+                staker_address: cfg.staker_address,
+                stake_duration: stake_duration,
+                stake_index: 0,
+            );
+        assert!(stake_info.is_none());
 
-    let stake_info = staking_dispatcher
-        .get_stake_info(
-            staker_address: cfg.staker_address,
-            stake_duration: StakeDuration::SixMonths,
-            stake_index: 0,
-        );
-    assert!(stake_info.is_none());
-
-    let stake_info = staking_dispatcher
-        .get_stake_info(
-            staker_address: cfg.staker_address,
-            stake_duration: StakeDuration::TwelveMonths,
-            stake_index: 0,
-        );
-    assert!(stake_info.is_none());
+        let stake_info = staking_dispatcher
+            .get_stake_info(
+                staker_address: cfg.staker_address,
+                stake_duration: stake_duration,
+                stake_index: 1,
+            );
+        assert!(stake_info.is_none());
+    }
 }
 
 #[test]
