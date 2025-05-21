@@ -4,9 +4,9 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, deploy_memecoin_staking_contract, deploy_mock_erc20_contract,
-    load_value, stake_and_verify_stake_info, verify_stake_info,
+    load_value, set_rewards_contract, stake_and_verify_stake_info, verify_stake_info,
 };
-use memecoin_staking::types::{Amount, Cycle, Index};
+use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
@@ -336,99 +336,58 @@ fn test_close_reward_cycle() {
 
 #[test]
 fn test_query_points() {
+    // Setup.
     let mut cfg: TestCfg = Default::default();
-    let token_address = deploy_mock_erc20_contract(recipient: cfg.staker_address);
-    cfg.token_address = token_address;
-    let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-    let staking_contract_address = deploy_memecoin_staking_contract(
-        owner: cfg.owner, token_address: cfg.token_address,
-    );
-    let staking_dispatcher = IMemeCoinStakingDispatcher {
-        contract_address: staking_contract_address,
-    };
-    cheat_caller_address_once(
-        contract_address: staking_contract_address, caller_address: cfg.owner,
-    );
-    IMemeCoinStakingConfigDispatcher { contract_address: staking_contract_address }
-        .set_rewards_contract(rewards_contract: cfg.rewards_contract);
+    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    deploy_memecoin_staking_contract(ref :cfg);
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    set_rewards_contract(:cfg);
 
-    let amount: Amount = 1000;
-    let duration = StakeDuration::OneMonth;
-    approve_and_stake(
-        token_dispatcher: @token_dispatcher,
-        staking_dispatcher: @staking_dispatcher,
-        staker_address: cfg.staker_address,
-        :amount,
-        :duration,
-    );
+    // Transfer to staker.
+    let staker_supply: Amount = 10000;
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
 
-    let mut points = amount * duration.get_multiplier().unwrap().into();
-    cheat_caller_address_once(
-        contract_address: staking_contract_address, caller_address: cfg.owner,
-    );
-    let points_info = staking_dispatcher.query_points(version: 0);
+    // Stake and verify points.
+    let amount: Amount = staker_supply / 2;
+    let stake_duration = StakeDuration::OneMonth;
+    approve_and_stake(:cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
+
+    let mut points = amount * stake_duration.get_multiplier().unwrap().into();
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    let points_info = staking_dispatcher.query_points(reward_cycle: 0);
     assert!(points_info == points);
 
+    // Close reward cycle and verify points.
     cheat_caller_address_once(
-        contract_address: staking_contract_address, caller_address: cfg.rewards_contract,
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
-    let total_points = staking_dispatcher.new_version();
+    let total_points = staking_dispatcher.close_reward_cycle();
     assert!(total_points == points);
 
-    let amount: Amount = 2000;
-    let duration = StakeDuration::ThreeMonths;
-    approve_and_stake(
-        token_dispatcher: @token_dispatcher,
-        staking_dispatcher: @staking_dispatcher,
-        staker_address: cfg.staker_address,
-        :amount,
-        :duration,
-    );
+    // Stake and verify points for both reward cycles.
+    let amount: Amount = staker_supply / 2;
+    let stake_duration = StakeDuration::ThreeMonths;
+    approve_and_stake(:cfg, staker_address: cfg.staker_address, :amount, :stake_duration);
 
-    let new_version_points = amount * duration.get_multiplier().unwrap().into();
-    cheat_caller_address_once(
-        contract_address: staking_contract_address, caller_address: cfg.owner,
-    );
-    let points_info = staking_dispatcher.query_points(version: 0);
+    let new_version_points = amount * stake_duration.get_multiplier().unwrap().into();
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    let points_info = staking_dispatcher.query_points(reward_cycle: 0);
     assert!(points_info == points);
 
-    cheat_caller_address_once(
-        contract_address: staking_contract_address, caller_address: cfg.owner,
-    );
-    let points_info = staking_dispatcher.query_points(version: 1);
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    let points_info = staking_dispatcher.query_points(reward_cycle: 1);
     assert!(points_info == new_version_points);
 }
 
 #[test]
-#[should_panic(expected: "Version number is too high")]
-fn test_query_points_high_version() {
-    let cfg: TestCfg = Default::default();
-    let staking_contract_address = deploy_memecoin_staking_contract(
-        owner: cfg.owner, token_address: cfg.token_address,
-    );
-    let staking_dispatcher = IMemeCoinStakingDispatcher {
-        contract_address: staking_contract_address,
-    };
+#[should_panic(expected: "Reward cycle number is too high")]
+fn test_query_points_high_reward_cycle() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_memecoin_staking_contract(ref :cfg);
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    cheat_caller_address_once(
-        contract_address: staking_contract_address, caller_address: cfg.owner,
-    );
-    staking_dispatcher.query_points(version: 1);
-}
-
-#[test]
-#[should_panic(expected: "Only callable by the owner")]
-fn test_query_points_wrong_caller() {
-    let cfg: TestCfg = Default::default();
-    let staking_contract_address = deploy_memecoin_staking_contract(
-        owner: cfg.owner, token_address: cfg.token_address,
-    );
-    let staking_dispatcher = IMemeCoinStakingDispatcher {
-        contract_address: staking_contract_address,
-    };
-
-    cheat_caller_address_once(
-        contract_address: staking_contract_address, caller_address: cfg.staker_address,
-    );
-    staking_dispatcher.query_points(version: 0);
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    staking_dispatcher.query_points(reward_cycle: 1);
 }

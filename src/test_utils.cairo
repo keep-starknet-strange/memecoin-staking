@@ -1,4 +1,5 @@
 use memecoin_staking::memecoin_staking::interface::{
+    IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
     StakeInfo, StakeInfoTrait,
 };
@@ -138,4 +139,14 @@ pub fn find_stake_by_index(stake_info: @Span<StakeInfo>, index: Index) -> Option
         }
     }
     None
+}
+
+pub fn set_rewards_contract(cfg: TestCfg) {
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher {
+        contract_address: cfg.staking_contract,
+    };
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.owner,
+    );
+    config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
 }
