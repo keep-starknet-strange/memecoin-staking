@@ -79,10 +79,7 @@ pub fn approve_and_stake(
     let token_address = cfg.token_address;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
     cheat_and_approve(
-        :token_address,
-        approver: staker_address,
-        spender: cfg.staking_contract,
-        :amount,
+        :token_address, approver: staker_address, spender: cfg.staking_contract, :amount,
     );
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
@@ -107,7 +104,7 @@ pub fn verify_stake_info(
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
 }
 
-pub fn memecoin_staking_test_setup() -> TestCfg {
+pub fn staking_contract_test_setup() -> TestCfg {
     let mut cfg: TestCfg = Default::default();
     let owner = cfg.owner;
     let rewards_contract = cfg.rewards_contract;
@@ -118,9 +115,7 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
     let config_dispatcher = IMemeCoinStakingConfigDispatcher {
         contract_address: cfg.staking_contract,
     };
-    cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.owner,
-    );
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     config_dispatcher.set_rewards_contract(:rewards_contract);
 
     // Transfer to staker.
