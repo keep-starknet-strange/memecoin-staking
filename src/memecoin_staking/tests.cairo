@@ -99,16 +99,19 @@ fn test_stake() {
 
 #[test]
 fn test_get_stake_info() {
+    // Setup.
     let mut cfg: TestCfg = Default::default();
     cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
+    // Transfer to staker.
     let mut staker_supply: Amount = 2000;
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
 
+    // Stake and verify one month.
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::OneMonth;
@@ -120,6 +123,7 @@ fn test_get_stake_info() {
         .unwrap();
     verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
 
+    // Stake and verify three months.
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::ThreeMonths;
@@ -131,6 +135,7 @@ fn test_get_stake_info() {
         .unwrap();
     verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
 
+    // Stake and verify six months.
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::SixMonths;
@@ -142,6 +147,7 @@ fn test_get_stake_info() {
         .unwrap();
     verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
 
+    // Stake and verify twelve months.
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::TwelveMonths;
@@ -156,16 +162,19 @@ fn test_get_stake_info() {
 
 #[test]
 fn test_get_stake_info_not_exist() {
+    // Setup.
     let mut cfg: TestCfg = Default::default();
     cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
+    // Transfer to staker.
     let staker_supply: Amount = 2000;
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
 
+    // Verify that the stake info does not exist before staking.
     let stake_info = staking_dispatcher
         .get_stake_info(
             staker_address: cfg.staker_address,
@@ -174,6 +183,7 @@ fn test_get_stake_info_not_exist() {
         );
     assert!(stake_info.is_none());
 
+    // Stake and verify existence.
     let amount: Amount = staker_supply;
     let stake_duration = StakeDuration::OneMonth;
     let stake_index = approve_and_stake(
@@ -183,6 +193,7 @@ fn test_get_stake_info_not_exist() {
         .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index);
     assert!(stake_info.is_some());
 
+    // Verify that the stake info does not exist for future index.
     let stake_info = staking_dispatcher
         .get_stake_info(
             staker_address: cfg.staker_address,
@@ -191,6 +202,7 @@ fn test_get_stake_info_not_exist() {
         );
     assert!(stake_info.is_none());
 
+    // Verify that the stake info does not exist for other stake durations.
     let stake_info = staking_dispatcher
         .get_stake_info(
             staker_address: cfg.staker_address,
