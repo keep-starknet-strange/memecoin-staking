@@ -104,18 +104,20 @@ pub fn verify_stake_info(
 }
 
 pub fn stake_and_verify_stake_info(
-    cfg: @TestCfg, amount: Amount, stake_duration: StakeDuration, reward_cycle: Cycle,
+    cfg: TestCfg, amount: Amount, stake_duration: StakeDuration, reward_cycle: Cycle,
 ) {
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
     let stake_index = approve_and_stake(
-        :cfg, staker_address: *cfg.staker_address, :amount, :stake_duration,
+        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
     cheat_caller_address_once(
-        contract_address: *cfg.staking_contract, caller_address: *cfg.staker_address,
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
+    let stake_info = staking_dispatcher
+        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
+        .unwrap();
     verify_stake_info(
-        stake_info: @stake_info, :stake_index, :reward_cycle, :amount, :stake_duration,
+        stake_info: stake_info, :stake_index, :reward_cycle, :amount, :stake_duration,
     );
 }
 

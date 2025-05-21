@@ -306,7 +306,7 @@ fn test_close_reward_cycle() {
     let mut reward_cycle = 0;
     let amount: Amount = staker_supply / 2;
     let stake_duration = StakeDuration::OneMonth;
-    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, :reward_cycle);
+    stake_and_verify_stake_info(:cfg, :amount, :stake_duration, :reward_cycle);
 
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
@@ -320,7 +320,7 @@ fn test_close_reward_cycle() {
     assert!(loaded_current_reward_cycle == reward_cycle);
 
     let stake_duration = StakeDuration::ThreeMonths;
-    stake_and_verify_stake_info(cfg: @cfg, :amount, :stake_duration, :reward_cycle);
+    stake_and_verify_stake_info(:cfg, :amount, :stake_duration, :reward_cycle);
 
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
