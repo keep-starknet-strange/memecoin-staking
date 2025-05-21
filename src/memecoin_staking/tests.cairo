@@ -113,57 +113,45 @@ fn test_get_stake_info() {
     staker_supply -= amount;
     let stake_duration = StakeDuration::OneMonth;
     let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
-    cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
-    );
-    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
-    verify_stake_info(
-        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
-    );
+    let stake_info = staking_dispatcher
+        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
+        .unwrap();
+    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
 
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::ThreeMonths;
     let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
-    cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
-    );
-    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
-    verify_stake_info(
-        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
-    );
+    let stake_info = staking_dispatcher
+        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
+        .unwrap();
+    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
 
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::SixMonths;
     let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
-    cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
-    );
-    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
-    verify_stake_info(
-        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
-    );
+    let stake_info = staking_dispatcher
+        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
+        .unwrap();
+    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
 
     let amount: Amount = staker_supply / 2;
     staker_supply -= amount;
     let stake_duration = StakeDuration::TwelveMonths;
     let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
-    cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
-    );
-    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index).unwrap();
-    verify_stake_info(
-        stake_info: @stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration,
-    );
+    let stake_info = staking_dispatcher
+        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
+        .unwrap();
+    verify_stake_info(:stake_info, :stake_index, reward_cycle: 0, :amount, :stake_duration);
 }
 
 #[test]
@@ -179,34 +167,52 @@ fn test_get_stake_info_not_exist() {
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: staker_supply.into());
 
     let stake_info = staking_dispatcher
-        .get_stake_info(stake_duration: StakeDuration::OneMonth, stake_index: 0);
+        .get_stake_info(
+            staker_address: cfg.staker_address,
+            stake_duration: StakeDuration::OneMonth,
+            stake_index: 0,
+        );
     assert!(stake_info.is_none());
 
     let amount: Amount = staker_supply;
     let stake_duration = StakeDuration::OneMonth;
     let stake_index = approve_and_stake(
-        cfg: @cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
+        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
     );
-    cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
-    );
-    let stake_info = staking_dispatcher.get_stake_info(:stake_duration, :stake_index);
+    let stake_info = staking_dispatcher
+        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index);
     assert!(stake_info.is_some());
 
     let stake_info = staking_dispatcher
-        .get_stake_info(stake_duration: StakeDuration::OneMonth, stake_index: 1);
+        .get_stake_info(
+            staker_address: cfg.staker_address,
+            stake_duration: StakeDuration::OneMonth,
+            stake_index: 1,
+        );
     assert!(stake_info.is_none());
 
     let stake_info = staking_dispatcher
-        .get_stake_info(stake_duration: StakeDuration::ThreeMonths, stake_index: 0);
+        .get_stake_info(
+            staker_address: cfg.staker_address,
+            stake_duration: StakeDuration::ThreeMonths,
+            stake_index: 0,
+        );
     assert!(stake_info.is_none());
 
     let stake_info = staking_dispatcher
-        .get_stake_info(stake_duration: StakeDuration::SixMonths, stake_index: 0);
+        .get_stake_info(
+            staker_address: cfg.staker_address,
+            stake_duration: StakeDuration::SixMonths,
+            stake_index: 0,
+        );
     assert!(stake_info.is_none());
 
     let stake_info = staking_dispatcher
-        .get_stake_info(stake_duration: StakeDuration::TwelveMonths, stake_index: 0);
+        .get_stake_info(
+            staker_address: cfg.staker_address,
+            stake_duration: StakeDuration::TwelveMonths,
+            stake_index: 0,
+        );
     assert!(stake_info.is_none());
 }
 

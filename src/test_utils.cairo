@@ -11,7 +11,7 @@ use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 pub const INITIAL_SUPPLY: u256 = 100000;
 
-#[derive(Drop)]
+#[derive(Drop, Copy)]
 pub struct TestCfg {
     pub owner: ContractAddress,
     pub rewards_contract: ContractAddress,
@@ -72,10 +72,10 @@ pub fn load_value<T, +Serde<T>, +Store<T>>(
 }
 
 pub fn approve_and_stake(
-    cfg: @TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
+    cfg: TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
 ) -> Index {
-    let token_dispatcher = IERC20Dispatcher { contract_address: *cfg.token_address };
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
     cheat_caller_address_once(
         contract_address: token_dispatcher.contract_address, caller_address: staker_address,
     );
@@ -87,7 +87,7 @@ pub fn approve_and_stake(
 }
 
 pub fn verify_stake_info(
-    stake_info: @StakeInfo,
+    stake_info: StakeInfo,
     stake_index: Index,
     reward_cycle: Cycle,
     amount: Amount,

@@ -71,9 +71,11 @@ pub mod MemeCoinStaking {
         }
 
         fn get_stake_info(
-            self: @ContractState, stake_duration: StakeDuration, stake_index: Index,
+            self: @ContractState,
+            staker_address: ContractAddress,
+            stake_duration: StakeDuration,
+            stake_index: Index,
         ) -> Option<StakeInfo> {
-            let staker_address = get_caller_address();
             let stakes = self
                 .staker_info
                 .entry(key: staker_address)
