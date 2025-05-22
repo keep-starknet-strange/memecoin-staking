@@ -3,8 +3,9 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    STAKER_SUPPLY, TestCfg, approve_and_stake, cheat_approve, deploy_memecoin_staking_contract,
-    deploy_mock_erc20_contract, load_value, memecoin_staking_test_setup, verify_stake_info,
+    STAKER_SUPPLY, TestCfg, approve_and_stake, cheat_approve_staker,
+    deploy_memecoin_staking_contract, deploy_mock_erc20_contract, load_value,
+    memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -70,12 +71,7 @@ fn test_stake() {
 
     let amount: Amount = staker_supply / 2;
     let stake_duration = StakeDuration::OneMonth;
-    cheat_approve(
-        token_address: cfg.token_address,
-        approver: cfg.staker_address,
-        spender: cfg.staking_contract,
-        amount: amount,
-    );
+    cheat_approve_staker(:cfg, :amount);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
@@ -83,12 +79,7 @@ fn test_stake() {
     assert!(stake_index == 0);
 
     let stake_duration = StakeDuration::ThreeMonths;
-    cheat_approve(
-        token_address: cfg.token_address,
-        approver: cfg.staker_address,
-        spender: cfg.staking_contract,
-        amount: amount,
-    );
+    cheat_approve_staker(:cfg, :amount);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
@@ -259,12 +250,7 @@ fn test_stake_insufficient_balance() {
 
     let amount: u256 = 1;
     let stake_duration = StakeDuration::OneMonth;
-    cheat_approve(
-        token_address: cfg.token_address,
-        approver: cfg.staker_address,
-        spender: cfg.staking_contract,
-        amount: amount.try_into().unwrap(),
-    );
+    cheat_approve_staker(:cfg, amount: amount.try_into().unwrap());
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
