@@ -31,10 +31,9 @@ pub mod MemeCoinStaking {
         token_dispatcher: IERC20Dispatcher,
     }
 
+    // TODO: Remove this struct.
     #[starknet::storage_node]
     struct StakerInfo {
-        /// The running index for the stakes, unique to the staker.
-        stake_index: Index,
         /// The stake info for each `StakeDuration`.
         stake_info: Map<StakeDuration, Vec<StakeInfo>>,
     }
@@ -76,18 +75,16 @@ pub mod MemeCoinStaking {
             stake_duration: StakeDuration,
             stake_index: Index,
         ) -> Option<StakeInfo> {
-            let stakes = self
+            if let Some(stake_info) = self
                 .staker_info
                 .entry(key: staker_address)
                 .stake_info
-                .entry(key: stake_duration);
-            for i in 0..stakes.len() {
-                let stake_info = stakes.at(index: i).read();
-                if (stake_info.get_index() == stake_index) {
-                    return Some(stake_info);
-                }
+                .entry(key: stake_duration)
+                .get(index: stake_index.into()) {
+                Some(stake_info.read())
+            } else {
+                None
             }
-            None
         }
 
         fn close_reward_cycle(ref self: ContractState) -> u128 {
@@ -122,15 +119,20 @@ pub mod MemeCoinStaking {
             stake_duration: StakeDuration,
             amount: Amount,
         ) -> Index {
-            let stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
+            let stake_index = self.get_next_stake_index(:staker_address, :stake_duration);
             let reward_cycle = self.current_reward_cycle.read();
             let stake_info = StakeInfoImpl::new(
                 index: stake_index, :reward_cycle, :amount, :stake_duration,
             );
-            self.staker_info.entry(key: staker_address).stake_index.add_and_write(value: 1);
             self.push_stake_info(:staker_address, :stake_duration, :stake_info);
             // TODO: Emit event.
             stake_index
+        }
+
+        fn get_next_stake_index(
+            ref self: ContractState, staker_address: ContractAddress, stake_duration: StakeDuration,
+        ) -> Index {
+            self.staker_info.entry(key: staker_address).stake_info.entry(key: stake_duration).len()
         }
 
         fn push_stake_info(
