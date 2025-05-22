@@ -303,12 +303,6 @@ fn test_close_reward_cycle() {
         let stake_info = staking_dispatcher
             .get_stake_info(:staker_address, :stake_duration, :stake_index)
             .unwrap();
-        verify_stake_info(
-            :stake_info,
-            :stake_index,
-            :reward_cycle,
-            :amount,
-            :stake_duration,
-        );
+        verify_stake_info(:stake_info, :stake_index, :reward_cycle, :amount, :stake_duration);
     }
 }
