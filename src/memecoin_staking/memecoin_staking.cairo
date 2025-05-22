@@ -108,6 +108,7 @@ pub mod MemeCoinStaking {
                     + 1,
                 "Invalid total points per reward cycle length",
             );
+            // TODO: Emit event.
 
             total_points
         }
