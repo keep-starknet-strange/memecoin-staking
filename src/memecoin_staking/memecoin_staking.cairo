@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
+    use memecoin_staking::errors::Error;
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
         StakeInfoImpl,
@@ -12,7 +13,6 @@ pub mod MemeCoinStaking {
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::utils::AddToStorage;
-    use memecoin_staking::errors::Error;
 
     #[storage]
     struct Storage {
