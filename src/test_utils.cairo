@@ -131,11 +131,9 @@ pub fn cheat_staker_approve_staking(cfg: TestCfg, amount: Amount) {
     token_dispatcher.approve(spender: cfg.staking_contract, amount: amount.into());
 }
 
-pub fn find_stake_by_index(stake_info: @Span<StakeInfo>, index: Index) -> Option<@StakeInfo> {
-    for i in 0..stake_info.len() {
-        if stake_info.at(index: i).get_index() == index {
-            return Some(stake_info.at(index: i));
-        }
-    }
-    None
+pub fn calculate_points(amount: Amount, stake_duration: StakeDuration) -> u128 {
+    let multiplier = stake_duration.get_multiplier().unwrap();
+    let points = amount * multiplier.into();
+
+    points
 }
