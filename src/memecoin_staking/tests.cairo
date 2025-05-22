@@ -4,8 +4,7 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     STAKER_SUPPLY, TestCfg, approve_and_stake, cheat_staker_approve_staking,
-    deploy_memecoin_staking_contract, load_value, memecoin_staking_test_setup,
-    verify_stake_info,
+    deploy_memecoin_staking_contract, load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle};
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
