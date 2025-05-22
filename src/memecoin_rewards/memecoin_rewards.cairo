@@ -53,7 +53,7 @@ pub mod MemeCoinRewards {
         fn fund(ref self: ContractState, amount: Amount) {
             let owner = self.owner.read();
             assert!(get_caller_address() == owner, "Can only be called by the owner");
-            let total_points = self.staking_dispatcher.read().new_version();
+            let total_points = self.staking_dispatcher.read().close_reward_cycle();
             self.version_info.push(value: VersionInfo { total_rewards: amount, total_points });
             self
                 .token_dispatcher
