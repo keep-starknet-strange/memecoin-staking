@@ -58,7 +58,7 @@ fn test_stake() {
     let cfg = memecoin_staking_test_setup();
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    let amount: Amount = STAKER_SUPPLY / 2;
+    let amount: Amount = STAKER_SUPPLY / 3;
     let stake_duration = StakeDuration::OneMonth;
     cheat_staker_approve_staking(:cfg, :amount);
     cheat_caller_address_once(
@@ -68,6 +68,14 @@ fn test_stake() {
     assert!(stake_index == 0);
 
     let stake_duration = StakeDuration::ThreeMonths;
+    cheat_staker_approve_staking(:cfg, :amount);
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
+    assert!(stake_index == 0);
+
+    let stake_duration = StakeDuration::OneMonth;
     cheat_staker_approve_staking(:cfg, :amount);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
