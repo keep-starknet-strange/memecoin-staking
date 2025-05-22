@@ -12,6 +12,7 @@ pub mod MemeCoinStaking {
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::utils::AddToStorage;
+    use memecoin_staking::errors::Error;
 
     #[storage]
     struct Storage {
@@ -52,8 +53,7 @@ pub mod MemeCoinStaking {
     #[abi(embed_v0)]
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
-            // TODO: Create errors file and use it here.
-            assert!(get_caller_address() == self.owner.read(), "Can only be called by the owner");
+            assert!(get_caller_address() == self.owner.read(), "{}", Error::CALLER_IS_NOT_OWNER);
             self.rewards_contract.write(value: rewards_contract);
             // TODO: Emit event.
         }
@@ -93,20 +93,22 @@ pub mod MemeCoinStaking {
         fn close_reward_cycle(ref self: ContractState) -> u128 {
             assert!(
                 get_caller_address() == self.rewards_contract.read(),
-                "Can only be called by the rewards contract",
+                "{}",
+                Error::CALLER_IS_NOT_REWARDS_CONTRACT,
             );
             let curr_reward_cycle = self.current_reward_cycle.read();
             let total_points = self
                 .total_points_per_reward_cycle
                 .at(index: curr_reward_cycle.into())
                 .read();
-            assert!(total_points > 0, "Can't close reward cycle with no stakes");
+            assert!(total_points > 0, "{}", Error::ATTEMPT_CLOSE_EMPTY_CYCLE);
             self.current_reward_cycle.add_and_write(value: 1);
             self.total_points_per_reward_cycle.push(value: 0);
             assert!(
                 self.total_points_per_reward_cycle.len() == self.current_reward_cycle.read().into()
                     + 1,
-                "Invalid total points per reward cycle length",
+                "{}",
+                Error::INVALID_TOTAL_POINTS_PER_REWARD_CYCLE_LENGTH,
             );
             // TODO: Emit event.
 
@@ -151,7 +153,7 @@ pub mod MemeCoinStaking {
             ref self: ContractState, amount: Amount, stake_duration: StakeDuration,
         ) {
             let multiplier = stake_duration.get_multiplier();
-            assert!(multiplier.is_some(), "Invalid stake duration");
+            assert!(multiplier.is_some(), "{}", Error::INVALID_STAKE_DURATION);
             let points = amount * multiplier.unwrap().into();
             let reward_cycle = self.current_reward_cycle.read();
             self
