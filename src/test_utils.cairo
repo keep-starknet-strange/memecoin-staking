@@ -8,9 +8,7 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{
-    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
-};
+use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
@@ -83,32 +81,6 @@ pub fn deploy_mock_erc20_contract(owner: ContractAddress) -> ContractAddress {
     let (contract_address, _) = erc20_contract.deploy(constructor_calldata: @calldata).unwrap();
 
     contract_address
-}
-
-pub fn deploy_all_contracts(
-    ref cfg: TestCfg, owner_supply: u256, staker_supply: u256,
-) -> (ContractAddress, ContractAddress, ContractAddress) {
-    let initial_supply = owner_supply + staker_supply;
-    cfg.token_address = deploy_mock_erc20_contract(:initial_supply, recipient: cfg.owner);
-    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
-    IERC20Dispatcher { contract_address: cfg.token_address }
-        .transfer(recipient: cfg.staker_address, amount: staker_supply.into());
-
-    cfg
-        .staking_contract =
-            deploy_memecoin_staking_contract(owner: cfg.owner, token_address: cfg.token_address);
-    cfg
-        .rewards_contract =
-            deploy_memecoin_rewards_contract(
-                owner: cfg.owner,
-                staking_address: cfg.staking_contract,
-                token_address: cfg.token_address,
-            );
-    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
-    IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract }
-        .set_rewards_contract(rewards_contract: cfg.rewards_contract);
-
-    (cfg.token_address, cfg.staking_contract, cfg.rewards_contract)
 }
 
 pub fn load_value<T, +Serde<T>, +Store<T>>(
@@ -184,23 +156,16 @@ pub fn calculate_points(amount: Amount, stake_duration: StakeDuration) -> u128 {
     points
 }
 
-pub fn get_all_dispatchers(
-    cfg: @TestCfg,
-) -> (IERC20Dispatcher, IMemeCoinStakingDispatcher, IMemeCoinRewardsDispatcher) {
-    let token_dispatcher = IERC20Dispatcher { contract_address: *cfg.token_address };
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: *cfg.staking_contract };
-    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: *cfg.rewards_contract };
-    (token_dispatcher, staking_dispatcher, rewards_dispatcher)
-}
-
-pub fn approve_and_fund(cfg: @TestCfg, amount: Amount) {
-    let (token_dispatcher, _, rewards_dispatcher) = get_all_dispatchers(cfg: cfg);
+pub fn approve_and_fund(cfg: TestCfg, fund_amount: Amount) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
     cheat_caller_address_once(
-        contract_address: token_dispatcher.contract_address, caller_address: *cfg.owner,
+        contract_address: token_dispatcher.contract_address, caller_address: cfg.owner,
     );
-    token_dispatcher.approve(spender: rewards_dispatcher.contract_address, amount: amount.into());
+    token_dispatcher
+        .approve(spender: rewards_dispatcher.contract_address, amount: fund_amount.into());
     cheat_caller_address_once(
-        contract_address: rewards_dispatcher.contract_address, caller_address: *cfg.owner,
+        contract_address: rewards_dispatcher.contract_address, caller_address: cfg.owner,
     );
-    rewards_dispatcher.fund(amount: amount);
+    rewards_dispatcher.fund(amount: fund_amount);
 }
