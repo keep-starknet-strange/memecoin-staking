@@ -1,6 +1,6 @@
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
-    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
     STAKER_SUPPLY, TestCfg, approve_and_stake, calculate_points, cheat_staker_approve_staking,
@@ -275,7 +275,7 @@ fn test_close_reward_cycle() {
     );
     let total_points = staking_dispatcher.close_reward_cycle();
     reward_cycle += 1;
-    assert!(total_points == amount * stake_duration.get_multiplier().unwrap().into());
+    assert!(total_points == calculate_points(:amount, :stake_duration));
 
     // Second stake.
     let stake_duration = *stake_durations.at(index: 1);
