@@ -3,7 +3,7 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    STAKER_SUPPLY, TestCfg, approve_and_stake, cheat_and_approve, deploy_memecoin_staking_contract,
+    STAKER_SUPPLY, TestCfg, approve_and_stake, cheat_approve, deploy_memecoin_staking_contract,
     deploy_mock_erc20_contract, load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle};
@@ -70,7 +70,7 @@ fn test_stake() {
 
     let amount: Amount = staker_supply / 2;
     let stake_duration = StakeDuration::OneMonth;
-    cheat_and_approve(
+    cheat_approve(
         token_address: cfg.token_address,
         approver: cfg.staker_address,
         spender: cfg.staking_contract,
@@ -83,7 +83,7 @@ fn test_stake() {
     assert!(stake_index == 0);
 
     let stake_duration = StakeDuration::ThreeMonths;
-    cheat_and_approve(
+    cheat_approve(
         token_address: cfg.token_address,
         approver: cfg.staker_address,
         spender: cfg.staking_contract,
@@ -259,7 +259,7 @@ fn test_stake_insufficient_balance() {
 
     let amount: u256 = 1;
     let stake_duration = StakeDuration::OneMonth;
-    cheat_and_approve(
+    cheat_approve(
         token_address: cfg.token_address,
         approver: cfg.staker_address,
         spender: cfg.staking_contract,

@@ -78,9 +78,7 @@ pub fn approve_and_stake(
 ) -> Index {
     let token_address = cfg.token_address;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
-    cheat_and_approve(
-        :token_address, approver: staker_address, spender: cfg.staking_contract, :amount,
-    );
+    cheat_approve(:token_address, approver: staker_address, spender: cfg.staking_contract, :amount);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
@@ -124,7 +122,7 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
     cfg
 }
 
-pub fn cheat_and_approve(
+pub fn cheat_approve(
     token_address: ContractAddress,
     approver: ContractAddress,
     spender: ContractAddress,
