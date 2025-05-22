@@ -4,7 +4,7 @@ pub mod MemeCoinRewards {
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait,
     };
-    use memecoin_staking::types::{Amount, Version};
+    use memecoin_staking::types::{Amount, Cycle};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
         MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
@@ -20,9 +20,9 @@ pub mod MemeCoinRewards {
         /// The staking contract dispatcher.
         staking_dispatcher: IMemeCoinStakingDispatcher,
         /// The version info for each version.
-        /// Versions are set by the owner funding this contract.
-        /// Versions set the ratio between points and rewards for stakes.
-        version_info: Vec<VersionInfo>,
+        /// Cycles are set by the owner funding this contract.
+        /// Cycles set the ratio between points and rewards for stakes.
+        version_info: Vec<CycleInfo>,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
     }
@@ -30,7 +30,7 @@ pub mod MemeCoinRewards {
     /// Stores the total rewards and points per version.
     /// Aids in calculating the ratio of rewards per point.
     #[derive(starknet::Store, Drop)]
-    struct VersionInfo {
+    struct CycleInfo {
         total_rewards: Amount,
         total_points: u128,
     }
@@ -55,7 +55,7 @@ pub mod MemeCoinRewards {
             let owner = self.owner.read();
             assert!(get_caller_address() == owner, "Can only be called by the owner");
             let total_points = self.staking_dispatcher.read().close_reward_cycle();
-            self.version_info.push(value: VersionInfo { total_rewards: amount, total_points });
+            self.version_info.push(value: CycleInfo { total_rewards: amount, total_points });
             self
                 .token_dispatcher
                 .read()
@@ -65,9 +65,7 @@ pub mod MemeCoinRewards {
             // TODO: Emit event.
         }
 
-        fn query_rewards(
-            self: @ContractState, points_per_version: Span<(Version, u128)>,
-        ) -> Amount {
+        fn query_rewards(self: @ContractState, points_per_version: Span<(Cycle, u128)>) -> Amount {
             assert!(
                 get_caller_address() == self.staking_dispatcher.read().contract_address,
                 "Can only be called by the staking contract",
