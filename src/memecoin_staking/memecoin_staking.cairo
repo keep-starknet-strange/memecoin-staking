@@ -140,8 +140,7 @@ pub mod MemeCoinStaking {
         }
 
         fn get_current_reward_cycle(ref self: ContractState) -> Cycle {
-            let cycle = self.total_points_per_reward_cycle.len() - 1;
-            cycle.try_into().unwrap()
+            self.total_points_per_reward_cycle.len() - 1
         }
     }
 }
