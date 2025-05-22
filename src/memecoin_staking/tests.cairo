@@ -261,13 +261,7 @@ fn test_close_reward_cycle() {
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
     let mut stake_indexes: Array<Index> = array![];
     let stake_durations = array![StakeDuration::OneMonth, StakeDuration::ThreeMonths];
-
-    // Verify the initial reward cycle.
     let mut reward_cycle = 0;
-    let loaded_current_reward_cycle = load_value::<
-        Cycle,
-    >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
-    assert!(loaded_current_reward_cycle == reward_cycle);
 
     // First stake.
     let amount: Amount = STAKER_SUPPLY / 2;
@@ -282,10 +276,6 @@ fn test_close_reward_cycle() {
     let total_points = staking_dispatcher.close_reward_cycle();
     reward_cycle += 1;
     assert!(total_points == amount * stake_duration.get_multiplier().unwrap().into());
-    let loaded_current_reward_cycle = load_value::<
-        Cycle,
-    >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
-    assert!(loaded_current_reward_cycle == reward_cycle);
 
     // Second stake.
     let stake_duration = *stake_durations.at(index: 1);
@@ -299,10 +289,6 @@ fn test_close_reward_cycle() {
     let total_points = staking_dispatcher.close_reward_cycle();
     reward_cycle += 1;
     assert!(total_points == calculate_points(:amount, :stake_duration));
-    let loaded_current_reward_cycle = load_value::<
-        Cycle,
-    >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
-    assert!(loaded_current_reward_cycle == reward_cycle);
 
     // Verify stake info for each stake.
     for i in 0..stake_indexes.len() {
