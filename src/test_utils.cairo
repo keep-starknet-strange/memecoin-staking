@@ -76,14 +76,10 @@ pub fn load_value<T, +Serde<T>, +Store<T>>(
 pub fn approve_and_stake(
     cfg: TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
 ) -> Index {
-    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    cheat_staker_approve_staking(:cfg, :amount);
     cheat_caller_address_once(
-        contract_address: token_dispatcher.contract_address, caller_address: staker_address,
-    );
-    token_dispatcher.approve(spender: staking_dispatcher.contract_address, amount: amount.into());
-    cheat_caller_address_once(
-        contract_address: staking_dispatcher.contract_address, caller_address: staker_address,
+        contract_address: cfg.staking_contract, caller_address: staker_address,
     );
     staking_dispatcher.stake(:amount, :stake_duration)
 }
@@ -107,16 +103,18 @@ pub fn verify_stake_info(
 
 pub fn memecoin_staking_test_setup() -> TestCfg {
     let mut cfg: TestCfg = Default::default();
-    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    let owner = cfg.owner;
+    let rewards_contract = cfg.rewards_contract;
+    cfg.token_address = deploy_mock_erc20_contract(:owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let config_dispatcher = IMemeCoinStakingConfigDispatcher {
         contract_address: cfg.staking_contract,
     };
     cheat_caller_address_once(
-        contract_address: config_dispatcher.contract_address, caller_address: cfg.owner,
+        contract_address: config_dispatcher.contract_address, caller_address: owner,
     );
-    config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
+    config_dispatcher.set_rewards_contract(:rewards_contract);
 
     // Transfer to staker.
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
@@ -125,22 +123,12 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
     cfg
 }
 
-pub fn stake_and_verify_stake_info(
-    cfg: TestCfg, amount: Amount, stake_duration: StakeDuration, reward_cycle: Cycle,
-) {
-    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
-    let stake_index = approve_and_stake(
-        :cfg, staker_address: cfg.staker_address, :amount, :stake_duration,
-    );
+pub fn cheat_staker_approve_staking(cfg: TestCfg, amount: Amount) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     cheat_caller_address_once(
-        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+        contract_address: cfg.token_address, caller_address: cfg.staker_address,
     );
-    let stake_info = staking_dispatcher
-        .get_stake_info(staker_address: cfg.staker_address, :stake_duration, :stake_index)
-        .unwrap();
-    verify_stake_info(
-        stake_info: stake_info, :stake_index, :reward_cycle, :amount, :stake_duration,
-    );
+    token_dispatcher.approve(spender: cfg.staking_contract, amount: amount.into());
 }
 
 pub fn find_stake_by_index(stake_info: @Span<StakeInfo>, index: Index) -> Option<@StakeInfo> {
