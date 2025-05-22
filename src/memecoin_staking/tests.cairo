@@ -245,6 +245,15 @@ fn test_close_reward_cycle_no_stakes() {
 }
 
 #[test]
+#[should_panic(expected: "Can only be called by the rewards contract")]
+fn test_close_reward_cycle_wrong_caller() {
+    let cfg = memecoin_staking_test_setup();
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    staking_dispatcher.close_reward_cycle();
+}
+
+#[test]
 fn test_close_reward_cycle() {
     // Setup.
     let cfg = memecoin_staking_test_setup();
