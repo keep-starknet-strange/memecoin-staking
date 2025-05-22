@@ -103,16 +103,18 @@ pub fn verify_stake_info(
 
 pub fn memecoin_staking_test_setup() -> TestCfg {
     let mut cfg: TestCfg = Default::default();
-    cfg.token_address = deploy_mock_erc20_contract(owner: cfg.owner);
+    let owner = cfg.owner;
+    let rewards_contract = cfg.rewards_contract;
+    cfg.token_address = deploy_mock_erc20_contract(:owner);
     deploy_memecoin_staking_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let config_dispatcher = IMemeCoinStakingConfigDispatcher {
         contract_address: cfg.staking_contract,
     };
     cheat_caller_address_once(
-        contract_address: config_dispatcher.contract_address, caller_address: cfg.owner,
+        contract_address: config_dispatcher.contract_address, caller_address: owner,
     );
-    config_dispatcher.set_rewards_contract(rewards_contract: cfg.rewards_contract);
+    config_dispatcher.set_rewards_contract(:rewards_contract);
 
     // Transfer to staker.
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
