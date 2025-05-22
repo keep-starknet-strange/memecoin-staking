@@ -235,7 +235,6 @@ fn test_stake_insufficient_balance() {
     let mut cfg: TestCfg = Default::default();
     let owner = cfg.owner;
     cfg.token_address = deploy_mock_erc20_contract(:owner);
-    let token_address = cfg.token_address;
     deploy_memecoin_staking_contract(ref :cfg);
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
