@@ -25,8 +25,6 @@ pub mod MemeCoinStaking {
         staker_info: Map<ContractAddress, StakerInfo>,
         /// Stores the total points for each `reward_cycle`.
         total_points_per_reward_cycle: Vec<u128>,
-        /// The current `reward_cycle` number.
-        current_reward_cycle: Cycle,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
     }
@@ -44,7 +42,6 @@ pub mod MemeCoinStaking {
         ref self: ContractState, owner: ContractAddress, token_address: ContractAddress,
     ) {
         self.owner.write(value: owner);
-        self.current_reward_cycle.write(value: 0);
         self.token_dispatcher.write(value: IERC20Dispatcher { contract_address: token_address });
         self.total_points_per_reward_cycle.push(value: 0);
     }
@@ -100,7 +97,7 @@ pub mod MemeCoinStaking {
             amount: Amount,
         ) -> Index {
             let stake_index = self.staker_info.entry(key: staker_address).stake_index.read();
-            let reward_cycle = self.current_reward_cycle.read();
+            let reward_cycle = self.get_current_reward_cycle();
             let stake_info = StakeInfoImpl::new(
                 index: stake_index, :reward_cycle, :amount, :stake_duration,
             );
@@ -130,7 +127,7 @@ pub mod MemeCoinStaking {
             let multiplier = stake_duration.get_multiplier();
             assert!(multiplier.is_some(), "Invalid stake duration");
             let points = amount * multiplier.unwrap().into();
-            let reward_cycle = self.current_reward_cycle.read();
+            let reward_cycle = self.get_current_reward_cycle();
             self
                 .total_points_per_reward_cycle
                 .at(index: reward_cycle.into())
@@ -143,6 +140,11 @@ pub mod MemeCoinStaking {
             token_dispatcher
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
+        }
+
+        fn get_current_reward_cycle(ref self: ContractState) -> Cycle {
+            let cycle = self.total_points_per_reward_cycle.len() - 1;
+            cycle.try_into().unwrap()
         }
     }
 }
