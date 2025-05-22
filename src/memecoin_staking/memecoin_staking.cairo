@@ -90,7 +90,7 @@ pub mod MemeCoinStaking {
             None
         }
 
-        fn close_reward_cycle(ref self: ContractState) -> Amount {
+        fn close_reward_cycle(ref self: ContractState) -> u128 {
             assert!(
                 get_caller_address() == self.rewards_contract.read(),
                 "Can only be called by the rewards contract",
@@ -108,6 +108,7 @@ pub mod MemeCoinStaking {
                     + 1,
                 "Invalid total points per reward cycle length",
             );
+
             total_points
         }
     }
