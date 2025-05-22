@@ -167,5 +167,11 @@ pub mod MemeCoinStaking {
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
         }
+
+        fn caller_is_rewards_contract(self: @ContractState) -> bool {
+            let rewards_contract = self.rewards_contract.read();
+            let caller = get_caller_address();
+            rewards_contract == caller
+        }
     }
 }
