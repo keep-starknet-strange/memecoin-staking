@@ -77,7 +77,7 @@ pub fn approve_and_stake(
     cfg: TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
 ) -> Index {
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
-    cheat_approve_staker(:cfg, :amount);
+    cheat_staker_approve_staking(:cfg, :amount);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
@@ -121,7 +121,7 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
     cfg
 }
 
-pub fn cheat_approve_staker(cfg: TestCfg, amount: Amount) {
+pub fn cheat_staker_approve_staking(cfg: TestCfg, amount: Amount) {
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     cheat_caller_address_once(
         contract_address: cfg.token_address, caller_address: cfg.staker_address,
