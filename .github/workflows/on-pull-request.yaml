@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - arad/ci-fail-on-warning
 
 jobs:
   test:
