@@ -85,13 +85,17 @@ pub mod MemeCoinRewards {
             );
             assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
 
-            let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
+            let mut reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
             let rewards = mul_wide_and_floor_div(
                 lhs: points,
                 rhs: reward_cycle_info.total_rewards,
                 div: reward_cycle_info.total_points,
             )
                 .unwrap();
+
+            reward_cycle_info.total_points -= points;
+            reward_cycle_info.total_rewards -= rewards;
+            self.reward_cycle_info.at(index: reward_cycle).write(value: reward_cycle_info);
 
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher.transfer(recipient: staking_contract, amount: rewards.into());
