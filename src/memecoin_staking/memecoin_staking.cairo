@@ -98,7 +98,7 @@ pub mod MemeCoinStaking {
                 .total_points_per_reward_cycle
                 .at(index: curr_reward_cycle)
                 .read();
-            assert!(total_points > 0, "{}", Error::ATTEMPT_CLOSE_EMPTY_CYCLE);
+            assert!(total_points > 0, "{}", Error::CLOSE_EMPTY_CYCLE);
             self.total_points_per_reward_cycle.push(value: 0);
             // TODO: Emit event.
 
