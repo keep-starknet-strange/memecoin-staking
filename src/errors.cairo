@@ -13,6 +13,7 @@ pub(crate) enum Error {
     STAKING_TOKEN_MISMATCH,
     REWARDS_CONTRACT_NOT_SET,
     REWARDS_CONTRACT_ALREADY_SET,
+    CLAIM_POINTS_EXCEEDS_CYCLE_POINTS,
 }
 
 impl DescribableError of Describable<Error> {
@@ -29,6 +30,7 @@ impl DescribableError of Describable<Error> {
             Error::STAKING_TOKEN_MISMATCH => "Staking token mismatch",
             Error::REWARDS_CONTRACT_NOT_SET => "Rewards contract not set",
             Error::REWARDS_CONTRACT_ALREADY_SET => "Rewards contract already set",
+            Error::CLAIM_POINTS_EXCEEDS_CYCLE_POINTS => "Claim points exceeds cycle points",
         }
     }
 }
