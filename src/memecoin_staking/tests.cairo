@@ -20,6 +20,11 @@ fn test_constructor() {
     );
     assert!(loaded_owner == cfg.owner);
 
+    let loaded_current_reward_cycle = load_value::<
+        Cycle,
+    >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
+    assert!(loaded_current_reward_cycle == 0);
+
     let loaded_token_dispatcher = load_value::<
         IERC20Dispatcher,
     >(contract_address: cfg.staking_contract, storage_address: selector!("token_dispatcher"));
@@ -74,6 +79,11 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 1);
+
+    let loaded_current_reward_cycle = load_value::<
+        Cycle,
+    >(contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"));
+    assert!(loaded_current_reward_cycle == 0);
 }
 
 #[test]
