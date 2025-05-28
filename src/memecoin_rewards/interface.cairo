@@ -14,7 +14,7 @@ pub trait IMemeCoinRewards<TContractState> {
     fn get_token_address(self: @TContractState) -> ContractAddress;
 
     /// Transfer the equivalent amount of rewards for the given points and reward cycle
-    /// to the Staking Contract.
-    /// Can only be called by the Staking Contract.
+    /// to the staking contract.
+    /// Can only be called by the staking contract.
     fn claim_rewards(ref self: TContractState, points: u128, reward_cycle: Cycle) -> Amount;
 }
