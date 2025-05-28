@@ -162,11 +162,5 @@ pub mod MemeCoinStaking {
             // so this value will never underflow.
             self.total_points_per_reward_cycle.len() - 1
         }
-
-        fn caller_is_rewards_contract(self: @ContractState) -> bool {
-            let rewards_contract = self.rewards_contract.read();
-            let caller = get_caller_address();
-            rewards_contract == caller
-        }
     }
 }
