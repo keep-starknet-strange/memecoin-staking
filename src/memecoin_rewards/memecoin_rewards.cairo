@@ -22,7 +22,7 @@ pub mod MemeCoinRewards {
         /// The version info for each version.
         /// Versions are set by the owner funding this contract.
         /// Versions set the ratio between points and rewards for stakes.
-        version_info: Vec<VersionInfo>,
+        reward_cycle_info: Vec<RewardCycleInfo>,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
     }
@@ -30,7 +30,7 @@ pub mod MemeCoinRewards {
     /// Stores the total rewards and points per version.
     /// Aids in calculating the ratio of rewards per point.
     #[derive(starknet::Store, Drop)]
-    struct VersionInfo {
+    struct RewardCycleInfo {
         total_rewards: Amount,
         total_points: u128,
     }
@@ -55,7 +55,9 @@ pub mod MemeCoinRewards {
             let owner = self.owner.read();
             assert!(get_caller_address() == owner, "{}", Error::CALLER_IS_NOT_OWNER);
             let total_points = self.staking_dispatcher.read().close_reward_cycle();
-            self.version_info.push(value: VersionInfo { total_rewards: amount, total_points });
+            self
+                .reward_cycle_info
+                .push(value: RewardCycleInfo { total_rewards: amount, total_points });
             self
                 .token_dispatcher
                 .read()
