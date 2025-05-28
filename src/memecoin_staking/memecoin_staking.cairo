@@ -95,7 +95,7 @@ pub mod MemeCoinStaking {
             let curr_reward_cycle = self.get_current_reward_cycle();
             let total_points = self
                 .total_points_per_reward_cycle
-                .at(index: curr_reward_cycle.into())
+                .at(index: curr_reward_cycle)
                 .read();
             assert!(total_points > 0, "Can't close reward cycle with no stakes");
             self.total_points_per_reward_cycle.push(value: 0);
