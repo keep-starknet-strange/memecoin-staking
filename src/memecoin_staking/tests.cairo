@@ -291,7 +291,7 @@ fn test_close_reward_cycle() {
     // Verify stake info for each stake.
     for i in 0..stake_indexes.len() {
         let stake_index: Index = *stake_indexes.at(index: i);
-        let reward_cycle: Cycle = i.try_into().unwrap();
+        let reward_cycle: Cycle = i.into();
         let stake_info = staking_dispatcher
             .get_stake_info(:staker_address, :stake_duration, :stake_index)
             .unwrap();
