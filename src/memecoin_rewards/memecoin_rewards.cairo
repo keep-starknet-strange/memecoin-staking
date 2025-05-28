@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod MemeCoinRewards {
+    use memecoin_staking::errors::Error;
     use memecoin_staking::memecoin_rewards::interface::IMemeCoinRewards;
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait,
@@ -52,7 +53,7 @@ pub mod MemeCoinRewards {
     impl MemeCoinRewardsImpl of IMemeCoinRewards<ContractState> {
         fn fund(ref self: ContractState, amount: Amount) {
             let owner = self.owner.read();
-            assert!(get_caller_address() == owner, "Can only be called by the owner");
+            assert!(get_caller_address() == owner, "{}", Error::CALLER_IS_NOT_OWNER);
             let total_points = self.staking_dispatcher.read().close_reward_cycle();
             self.version_info.push(value: VersionInfo { total_rewards: amount, total_points });
             self
