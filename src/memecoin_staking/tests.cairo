@@ -3,10 +3,10 @@ use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
-    STAKER_SUPPLY, TestCfg, approve_and_stake, cheat_staker_approve_staking,
+    STAKER_SUPPLY, TestCfg, approve_and_stake, calculate_points, cheat_staker_approve_staking,
     deploy_memecoin_staking_contract, load_value, memecoin_staking_test_setup, verify_stake_info,
 };
-use memecoin_staking::types::Amount;
+use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
@@ -220,4 +220,71 @@ fn test_stake_insufficient_balance() {
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
     staking_dispatcher.stake(:amount, :stake_duration);
+}
+
+#[test]
+#[should_panic(expected: "Can't close reward cycle with no stakes")]
+fn test_close_reward_cycle_no_stakes() {
+    let cfg = memecoin_staking_test_setup();
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
+    );
+    staking_dispatcher.close_reward_cycle();
+}
+
+#[test]
+#[should_panic(expected: "Can only be called by the rewards contract")]
+fn test_close_reward_cycle_wrong_caller() {
+    let cfg = memecoin_staking_test_setup();
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    staking_dispatcher.close_reward_cycle();
+}
+
+#[test]
+fn test_close_reward_cycle() {
+    // Setup.
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let mut stake_indexes: Array<Index> = array![];
+    let stake_duration = StakeDuration::OneMonth;
+    let mut reward_cycle = 0;
+
+    // First stake.
+    let amount: Amount = STAKER_SUPPLY / 2;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    stake_indexes.append(value: stake_index);
+
+    // Close the first reward cycle and verify the total points.
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
+    );
+    let total_points = staking_dispatcher.close_reward_cycle();
+    reward_cycle += 1;
+    assert!(total_points == calculate_points(:amount, :stake_duration));
+
+    // Second stake.
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    stake_indexes.append(value: stake_index);
+
+    // Close the second reward cycle and verify the total points.
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
+    );
+    let total_points = staking_dispatcher.close_reward_cycle();
+    reward_cycle += 1;
+    assert!(total_points == calculate_points(:amount, :stake_duration));
+
+    // Verify stake info for each stake.
+    for i in 0..stake_indexes.len() {
+        let stake_index: Index = *stake_indexes.at(index: i);
+        let reward_cycle: Cycle = i.into();
+        let stake_info = staking_dispatcher
+            .get_stake_info(:staker_address, :stake_duration, :stake_index)
+            .unwrap();
+        verify_stake_info(:stake_info, :stake_index, :reward_cycle, :amount, :stake_duration);
+    }
 }

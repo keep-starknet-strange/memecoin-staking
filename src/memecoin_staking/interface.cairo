@@ -22,6 +22,9 @@ pub trait IMemeCoinStaking<TContractState> {
         stake_duration: StakeDuration,
         stake_index: Index,
     ) -> Option<StakeInfo>;
+
+    /// Bumps current reward cycle, returns total points for the previous cycle.
+    fn close_reward_cycle(ref self: TContractState) -> u128;
 }
 
 /// Different stake durations.

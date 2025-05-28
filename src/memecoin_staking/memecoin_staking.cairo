@@ -86,6 +86,23 @@ pub mod MemeCoinStaking {
             }
             None
         }
+
+        fn close_reward_cycle(ref self: ContractState) -> u128 {
+            assert!(
+                get_caller_address() == self.rewards_contract.read(),
+                "Can only be called by the rewards contract",
+            );
+            let curr_reward_cycle = self.get_current_reward_cycle();
+            let total_points = self
+                .total_points_per_reward_cycle
+                .at(index: curr_reward_cycle)
+                .read();
+            assert!(total_points > 0, "Can't close reward cycle with no stakes");
+            self.total_points_per_reward_cycle.push(value: 0);
+            // TODO: Emit event.
+
+            total_points
+        }
     }
 
     #[generate_trait]

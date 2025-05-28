@@ -130,3 +130,10 @@ pub fn cheat_staker_approve_staking(cfg: TestCfg, amount: Amount) {
     );
     token_dispatcher.approve(spender: cfg.staking_contract, amount: amount.into());
 }
+
+pub fn calculate_points(amount: Amount, stake_duration: StakeDuration) -> u128 {
+    let multiplier = stake_duration.get_multiplier().unwrap();
+    let points = amount * multiplier.into();
+
+    points
+}
