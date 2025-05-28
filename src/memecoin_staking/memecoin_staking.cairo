@@ -140,6 +140,8 @@ pub mod MemeCoinStaking {
         }
 
         fn get_current_reward_cycle(ref self: ContractState) -> Cycle {
+            // The vector is initialized in the constructor with one element,
+            // so this value will never underflow.
             self.total_points_per_reward_cycle.len() - 1
         }
     }
