@@ -145,10 +145,7 @@ pub mod MemeCoinStaking {
             assert!(multiplier.is_some(), "Invalid stake duration");
             let points = amount * multiplier.unwrap().into();
             let reward_cycle = self.get_current_reward_cycle();
-            self
-                .total_points_per_reward_cycle
-                .at(index: reward_cycle.into())
-                .add_and_write(value: points);
+            self.total_points_per_reward_cycle.at(index: reward_cycle).add_and_write(value: points);
         }
 
         fn transfer_to_contract(ref self: ContractState, sender: ContractAddress, amount: Amount) {
@@ -160,8 +157,9 @@ pub mod MemeCoinStaking {
         }
 
         fn get_current_reward_cycle(ref self: ContractState) -> Cycle {
-            let cycle = self.total_points_per_reward_cycle.len() - 1;
-            cycle.try_into().unwrap()
+            // The vector is initialized in the constructor with one element,
+            // so this value will never underflow.
+            self.total_points_per_reward_cycle.len() - 1
         }
     }
 }
