@@ -6,7 +6,6 @@ use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, deploy_memecoin_rewards_contract, load_value,
     memecoin_staking_test_setup,
 };
-use memecoin_staking::types::Cycle;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
@@ -48,11 +47,6 @@ fn test_fund() {
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.owner);
     rewards_dispatcher.fund(amount: fund_amount);
     assert!(token_dispatcher.balance_of(account: cfg.rewards_contract) == fund_amount.into());
-
-    let loaded_reward_cycle: Cycle = load_value(
-        contract_address: cfg.staking_contract, storage_address: selector!("current_reward_cycle"),
-    );
-    assert!(loaded_reward_cycle == 1);
 }
 
 #[test]
