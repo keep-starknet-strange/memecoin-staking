@@ -1,6 +1,7 @@
 use memecoin_staking::types::{Amount, Cycle, Index, Multiplier};
 use starknet::ContractAddress;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
+use memecoin_staking::errors::Error;
 
 #[starknet::interface]
 pub trait IMemeCoinStakingConfig<TContractState> {
@@ -91,7 +92,7 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         index: Index, reward_cycle: Cycle, amount: Amount, stake_duration: StakeDuration,
     ) -> StakeInfo {
         let time_delta = stake_duration.to_time_delta();
-        assert!(time_delta.is_some(), "Invalid stake duration");
+        assert!(time_delta.is_some(), "{}", Error::INVALID_STAKE_DURATION);
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
         StakeInfo { index, reward_cycle, amount, vesting_time }
     }
