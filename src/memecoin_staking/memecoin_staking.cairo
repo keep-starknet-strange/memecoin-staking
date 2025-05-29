@@ -15,6 +15,7 @@ pub mod MemeCoinStaking {
         Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starkware_utils::types::time::time::Time;
     use starkware_utils::utils::AddToStorage;
 
     #[storage]
@@ -128,6 +129,26 @@ pub mod MemeCoinStaking {
             total_points
         }
 
+        fn claim_rewards(
+            ref self: ContractState, stake_duration: StakeDuration, stake_index: Index,
+        ) -> Amount {
+            let staker_address = get_caller_address();
+            let rewards_contract = self.get_rewards_contract();
+            let (reward_cycle, points) = self
+                .claim_stake(:staker_address, :stake_duration, :stake_index);
+            let rewards_contract_dispatcher = IMemeCoinRewardsDispatcher {
+                contract_address: rewards_contract,
+            };
+            let token_dispatcher = self.token_dispatcher.read();
+            let caller_address = get_caller_address();
+
+            let rewards = rewards_contract_dispatcher.claim_rewards(:points, :reward_cycle);
+            token_dispatcher.transfer(recipient: caller_address, amount: rewards.into());
+
+            // TODO: Emit event.
+            rewards
+        }
+
         fn get_rewards_contract(self: @ContractState) -> ContractAddress {
             let rewards_contract = self.rewards_contract_dispatcher.read();
             assert!(rewards_contract.is_some(), "{}", Error::REWARDS_CONTRACT_NOT_SET);
@@ -193,6 +214,42 @@ pub mod MemeCoinStaking {
             // The vector is initialized in the constructor with one element,
             // so this value will never underflow.
             self.total_points_per_reward_cycle.len() - 1
+        }
+
+        fn calculate_points(
+            ref self: ContractState, stake_duration: StakeDuration, amount: Amount,
+        ) -> u128 {
+            let multiplier = stake_duration.get_multiplier();
+            assert!(multiplier.is_some(), "{}", Error::INVALID_STAKE_DURATION);
+            let points = amount * multiplier.unwrap().into();
+            points
+        }
+
+        fn claim_stake(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            stake_duration: StakeDuration,
+            stake_index: Index,
+        ) -> (Cycle, u128) {
+            let stake_info = self
+                .get_stake_info(staker_address: staker_address, :stake_duration, :stake_index);
+            assert!(stake_info.is_some(), "{}", Error::STAKE_NOT_FOUND);
+            let mut stake_info = stake_info.unwrap();
+            assert!(stake_info.get_vesting_time() <= Time::now(), "{}", Error::STAKE_NOT_VESTED);
+            assert!(!stake_info.get_claimed(), "{}", Error::STAKE_ALREADY_CLAIMED);
+            stake_info.set_claimed();
+            let amount = stake_info.get_amount();
+            let reward_cycle = stake_info.get_reward_cycle();
+            let points = self.calculate_points(:stake_duration, :amount);
+
+            self
+                .staker_info
+                .entry(key: staker_address)
+                .entry(key: stake_duration)
+                .at(index: stake_index)
+                .write(value: stake_info);
+
+            (reward_cycle, points)
         }
     }
 }
