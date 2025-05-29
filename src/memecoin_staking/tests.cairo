@@ -1,16 +1,19 @@
+use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
-    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
-    StakeInfoImpl,
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, IMemeCoinStakingSafeDispatcher,
+    IMemeCoinStakingSafeDispatcherTrait, StakeDuration, StakeDurationTrait, StakeInfoImpl,
 };
 use memecoin_staking::test_utils::{
-    TestCfg, advance_time, approve_and_stake, calculate_points, cheat_staker_approve_staking,
-    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_value,
-    memecoin_staking_test_setup, verify_stake_info,
+    TestCfg, advance_time, approve_and_fund, approve_and_stake, calculate_points,
+    cheat_staker_approve_staking, deploy_memecoin_rewards_contract,
+    deploy_memecoin_staking_contract, load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
-use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use starkware_utils::errors::Describable;
+use starkware_utils::types::time::time::TimeDelta;
+use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
 #[test]
 fn test_constructor() {
@@ -333,4 +336,121 @@ fn test_stake_is_vested() {
 
     advance_time(time_delta: stake_duration.to_time_delta().unwrap());
     assert!(stake_info.is_vested());
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_claim_rewards_sanity() {
+    // Setup.
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let staking_safe_dispatcher = IMemeCoinStakingSafeDispatcher {
+        contract_address: cfg.staking_contract,
+    };
+
+    // Stake and fund.
+    let amount: Amount = cfg.staker_supply;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    // Claim rewards before vesting time.
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap() - TimeDelta { seconds: 1 });
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let res = staking_safe_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    assert_panic_with_error(res, Error::STAKE_NOT_VESTED.describe());
+
+    // Claim rewards after vesting time.
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    assert!(rewards == fund_amount);
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    assert!(staker_balance == fund_amount.into());
+
+    // Claim rewards again.
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let res = staking_safe_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    assert_panic_with_error(res, Error::STAKE_ALREADY_CLAIMED.describe());
+}
+
+#[test]
+#[should_panic(expected: "Stake not found")]
+fn test_claim_rewards_not_found() {
+    let cfg = memecoin_staking_test_setup();
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = 0;
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+}
+
+#[test]
+#[should_panic(expected: "Rewards contract not set")]
+fn test_claim_rewards_rewards_contract_not_set() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_memecoin_staking_contract(ref :cfg);
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = 0;
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+}
+
+#[test]
+fn test_stake_info_claimed() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let mut stake_info = StakeInfoImpl::new(:reward_cycle, :amount, :stake_duration);
+    assert!(!stake_info.is_claimed());
+
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    stake_info.set_claimed();
+    assert!(stake_info.is_claimed());
+}
+
+#[test]
+#[should_panic(expected: "Stake not vested")]
+fn test_stake_info_claimed_before_vesting() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let mut stake_info = StakeInfoImpl::new(:reward_cycle, :amount, :stake_duration);
+
+    stake_info.set_claimed();
+}
+
+#[test]
+#[should_panic(expected: "Stake already claimed")]
+fn test_stake_info_claimed_twice() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let mut stake_info = StakeInfoImpl::new(:reward_cycle, :amount, :stake_duration);
+
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    stake_info.set_claimed();
+    stake_info.set_claimed();
 }
