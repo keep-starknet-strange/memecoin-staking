@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
+    use memecoin_staking::errors::Error;
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
         StakeInfoImpl,
@@ -41,8 +42,7 @@ pub mod MemeCoinStaking {
     #[abi(embed_v0)]
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
-            // TODO: Create errors file and use it here.
-            assert!(get_caller_address() == self.owner.read(), "Can only be called by the owner");
+            assert!(get_caller_address() == self.owner.read(), "{}", Error::CALLER_IS_NOT_OWNER);
             self.rewards_contract.write(value: rewards_contract);
             // TODO: Emit event.
         }
@@ -79,14 +79,15 @@ pub mod MemeCoinStaking {
         fn close_reward_cycle(ref self: ContractState) -> u128 {
             assert!(
                 get_caller_address() == self.rewards_contract.read(),
-                "Can only be called by the rewards contract",
+                "{}",
+                Error::CALLER_IS_NOT_REWARDS_CONTRACT,
             );
             let curr_reward_cycle = self.get_current_reward_cycle();
             let total_points = self
                 .total_points_per_reward_cycle
                 .at(index: curr_reward_cycle)
                 .read();
-            assert!(total_points > 0, "Can't close reward cycle with no stakes");
+            assert!(total_points > 0, "{}", Error::CLOSE_EMPTY_CYCLE);
             self.total_points_per_reward_cycle.push(value: 0);
             // TODO: Emit event.
 
@@ -133,7 +134,7 @@ pub mod MemeCoinStaking {
             ref self: ContractState, amount: Amount, stake_duration: StakeDuration,
         ) {
             let multiplier = stake_duration.get_multiplier();
-            assert!(multiplier.is_some(), "Invalid stake duration");
+            assert!(multiplier.is_some(), "{}", Error::INVALID_STAKE_DURATION);
             let points = amount * multiplier.unwrap().into();
             let reward_cycle = self.get_current_reward_cycle();
             self.total_points_per_reward_cycle.at(index: reward_cycle).add_and_write(value: points);
