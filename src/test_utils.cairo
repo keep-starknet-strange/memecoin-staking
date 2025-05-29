@@ -1,3 +1,6 @@
+use memecoin_staking::memecoin_rewards::interface::{
+    IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
+};
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
@@ -150,4 +153,14 @@ pub fn calculate_points(amount: Amount, stake_duration: StakeDuration) -> u128 {
     let points = amount * multiplier.into();
 
     points
+}
+
+pub fn approve_and_fund(cfg: TestCfg, fund_amount: Amount) {
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.funder);
+    token_dispatcher.approve(spender: cfg.rewards_contract, amount: fund_amount.into());
+
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
+    rewards_dispatcher.fund(amount: fund_amount);
 }
