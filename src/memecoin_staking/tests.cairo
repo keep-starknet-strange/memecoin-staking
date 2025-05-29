@@ -1,15 +1,18 @@
+use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
-    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, IMemeCoinStakingSafeDispatcher,
+    IMemeCoinStakingSafeDispatcherTrait, StakeDuration, StakeDurationTrait,
 };
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, calculate_points, cheat_staker_approve_staking,
-    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_value,
-    memecoin_staking_test_setup, verify_stake_info,
+    TestCfg, advance_time, approve_and_fund, approve_and_stake, calculate_points,
+    cheat_staker_approve_staking, deploy_memecoin_rewards_contract,
+    deploy_memecoin_staking_contract, load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
-use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use starkware_utils::errors::Describable;
+use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
 #[test]
 fn test_constructor() {
@@ -319,4 +322,80 @@ fn test_get_token_address() {
 
     let token_address = staking_dispatcher.get_token_address();
     assert!(token_address == cfg.token_address);
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_claim_rewards_sanity() {
+    // Setup.
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let staking_safe_dispatcher = IMemeCoinStakingSafeDispatcher {
+        contract_address: cfg.staking_contract,
+    };
+
+    // Stake and fund.
+    let amount: Amount = cfg.staker_supply;
+    let stake_duration = StakeDuration::OneMonth;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    // Claim rewards before vesting time.
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let res = staking_safe_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    assert_panic_with_error(res, Error::STAKE_NOT_VESTED.describe());
+
+    // Claim rewards after vesting time.
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let rewards = staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    assert!(rewards == fund_amount);
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    assert!(staker_balance == fund_amount.into());
+
+    // Claim rewards again.
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    let res = staking_safe_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    assert_panic_with_error(res, Error::STAKE_ALREADY_CLAIMED.describe());
+}
+
+#[test]
+#[should_panic(expected: "Stake not found")]
+fn test_claim_rewards_not_found() {
+    let cfg = memecoin_staking_test_setup();
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let stake_duration = StakeDuration::OneMonth;
+    let stake_index = 0;
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+}
+
+#[test]
+#[should_panic(expected: "Rewards contract not set")]
+fn test_claim_rewards_rewards_contract_not_set() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_memecoin_staking_contract(ref :cfg);
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let stake_duration = StakeDuration::OneMonth;
+    let stake_index = 0;
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
+    );
+    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
 }
