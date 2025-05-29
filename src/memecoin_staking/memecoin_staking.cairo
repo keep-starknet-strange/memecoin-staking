@@ -213,7 +213,7 @@ pub mod MemeCoinStaking {
             assert!(stake_info.is_some(), "{}", Error::STAKE_NOT_FOUND);
             let mut stake_info = stake_info.unwrap();
             assert!(stake_info.get_vesting_time() <= Time::now(), "{}", Error::STAKE_NOT_VESTED);
-            assert!(!stake_info.get_claimed(), "{}", Error::STAKE_ALREADY_CLAIMED);
+            assert!(!stake_info.is_claimed(), "{}", Error::STAKE_ALREADY_CLAIMED);
             stake_info.set_claimed();
             let amount = stake_info.get_amount();
             let reward_cycle = stake_info.get_reward_cycle();
