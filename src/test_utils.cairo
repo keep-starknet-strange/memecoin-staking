@@ -100,16 +100,11 @@ pub fn approve_and_stake(
 }
 
 pub fn verify_stake_info(
-    stake_info: StakeInfo,
-    stake_index: Index,
-    reward_cycle: Cycle,
-    amount: Amount,
-    stake_duration: StakeDuration,
+    stake_info: StakeInfo, reward_cycle: Cycle, amount: Amount, stake_duration: StakeDuration,
 ) {
     let upper_vesting_time_bound = Time::now().add(delta: stake_duration.to_time_delta().unwrap());
     let lower_vesting_time_bound = upper_vesting_time_bound
         .sub_delta(other: Time::seconds(count: 1));
-    assert!(stake_info.get_index() == stake_index);
     assert!(stake_info.get_reward_cycle() == reward_cycle);
     assert!(stake_info.get_amount() == amount);
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);

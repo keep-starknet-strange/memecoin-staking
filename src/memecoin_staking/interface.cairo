@@ -74,8 +74,6 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
 /// Stake info for each stake.
 #[derive(starknet::Store, Drop, Serde)]
 pub struct StakeInfo {
-    /// The stake index (unique to the staker, used for unstaking).
-    index: Index,
     /// The reward cycle number.
     /// Stakes in the same reward cycle share a points / rewards ratio,
     /// set according to the amount of rewards funded by the owner.
@@ -88,17 +86,11 @@ pub struct StakeInfo {
 
 #[generate_trait]
 pub(crate) impl StakeInfoImpl of StakeInfoTrait {
-    fn new(
-        index: Index, reward_cycle: Cycle, amount: Amount, stake_duration: StakeDuration,
-    ) -> StakeInfo {
+    fn new(reward_cycle: Cycle, amount: Amount, stake_duration: StakeDuration) -> StakeInfo {
         let time_delta = stake_duration.to_time_delta();
         assert!(time_delta.is_some(), "{}", Error::INVALID_STAKE_DURATION);
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
-        StakeInfo { index, reward_cycle, amount, vesting_time }
-    }
-
-    fn get_index(self: @StakeInfo) -> Index {
-        *self.index
+        StakeInfo { reward_cycle, amount, vesting_time }
     }
 
     fn get_reward_cycle(self: @StakeInfo) -> Cycle {

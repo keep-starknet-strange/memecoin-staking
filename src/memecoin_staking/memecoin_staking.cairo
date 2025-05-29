@@ -23,18 +23,11 @@ pub mod MemeCoinStaking {
         /// The address of the rewards contract associated with the staking contract.
         rewards_contract: ContractAddress,
         /// Stores the stake info per stake for each staker.
-        staker_info: Map<ContractAddress, StakerInfo>,
+        staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
         /// Stores the total points for each `reward_cycle`.
         total_points_per_reward_cycle: Vec<u128>,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
-    }
-
-    // TODO: Remove this struct.
-    #[starknet::storage_node]
-    struct StakerInfo {
-        /// The stake info for each `StakeDuration`.
-        stake_info: Map<StakeDuration, Vec<StakeInfo>>,
     }
 
     #[constructor]
@@ -75,7 +68,6 @@ pub mod MemeCoinStaking {
             if let Some(stake_info) = self
                 .staker_info
                 .entry(key: staker_address)
-                .stake_info
                 .entry(key: stake_duration)
                 .get(index: stake_index.into()) {
                 Some(stake_info.read())
@@ -113,9 +105,7 @@ pub mod MemeCoinStaking {
         ) -> Index {
             let stake_index = self.get_next_stake_index(:staker_address, :stake_duration);
             let reward_cycle = self.get_current_reward_cycle();
-            let stake_info = StakeInfoImpl::new(
-                index: stake_index, :reward_cycle, :amount, :stake_duration,
-            );
+            let stake_info = StakeInfoImpl::new(:reward_cycle, :amount, :stake_duration);
             self.push_stake_info(:staker_address, :stake_duration, :stake_info);
             // TODO: Emit event.
             stake_index
@@ -124,7 +114,7 @@ pub mod MemeCoinStaking {
         fn get_next_stake_index(
             ref self: ContractState, staker_address: ContractAddress, stake_duration: StakeDuration,
         ) -> Index {
-            self.staker_info.entry(key: staker_address).stake_info.entry(key: stake_duration).len()
+            self.staker_info.entry(key: staker_address).entry(key: stake_duration).len()
         }
 
         fn push_stake_info(
@@ -136,7 +126,6 @@ pub mod MemeCoinStaking {
             self
                 .staker_info
                 .entry(key: staker_address)
-                .stake_info
                 .entry(key: stake_duration)
                 .push(value: stake_info);
         }
