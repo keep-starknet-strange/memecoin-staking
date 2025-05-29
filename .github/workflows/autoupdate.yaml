@@ -2,7 +2,7 @@ name: Auto Update Workflow
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
 
 jobs:
   autoupdate:
@@ -25,7 +25,7 @@ jobs:
       - uses: peter-evans/rebase@v3
         with:
           token: ${{ secrets.USER_TOKEN }}
-          base: dev
+          base: main
           include-labels: |
             autoupdate-rebase
           exclude-labels: |
