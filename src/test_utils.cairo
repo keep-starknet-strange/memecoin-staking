@@ -8,9 +8,11 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
+use snforge_std::{
+    ContractClassTrait, DeclareResultTrait, declare, load, start_cheat_block_timestamp_global,
+};
 use starknet::{ContractAddress, Store};
-use starkware_utils::types::time::time::Time;
+use starkware_utils::types::time::time::{Time, TimeDelta};
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 const INITIAL_SUPPLY: u256 = 100000;
@@ -125,7 +127,7 @@ pub fn verify_stake_info(
     assert!(stake_info.get_amount() == amount);
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
-    assert!(stake_info.get_claimed() == claimed);
+    assert!(stake_info.is_claimed() == claimed);
 }
 
 pub fn memecoin_staking_test_setup() -> TestCfg {
@@ -173,4 +175,8 @@ pub fn approve_and_fund(cfg: TestCfg, fund_amount: Amount) {
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
     rewards_dispatcher.fund(amount: fund_amount);
+}
+
+pub fn advance_time(time_delta: TimeDelta) {
+    start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time_delta).into());
 }
