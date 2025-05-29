@@ -87,7 +87,8 @@ pub mod MemeCoinStaking {
         fn close_reward_cycle(ref self: ContractState) -> u128 {
             assert!(
                 get_caller_address() == self.rewards_contract.read(),
-                "{}", Error::CALLER_IS_NOT_REWARDS_CONTRACT,
+                "{}",
+                Error::CALLER_IS_NOT_REWARDS_CONTRACT,
             );
             let curr_reward_cycle = self.get_current_reward_cycle();
             let total_points = self

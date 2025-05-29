@@ -1,7 +1,7 @@
+use memecoin_staking::errors::Error;
 use memecoin_staking::types::{Amount, Cycle, Index, Multiplier};
 use starknet::ContractAddress;
 use starkware_utils::types::time::time::{Time, TimeDelta, Timestamp};
-use memecoin_staking::errors::Error;
 
 #[starknet::interface]
 pub trait IMemeCoinStakingConfig<TContractState> {
