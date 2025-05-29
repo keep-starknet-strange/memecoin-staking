@@ -8,6 +8,10 @@ pub(crate) enum Error {
     CLOSE_EMPTY_CYCLE,
     INVALID_CYCLE,
     INVALID_STAKE_DURATION,
+    REWARDS_CONTRACT_NOT_SET,
+    STAKE_NOT_FOUND,
+    STAKE_NOT_VESTED,
+    STAKE_ALREADY_CLAIMED,
 }
 
 impl DescribableError of Describable<Error> {
@@ -19,6 +23,10 @@ impl DescribableError of Describable<Error> {
             Error::CLOSE_EMPTY_CYCLE => "Can't close reward cycle with no stakes",
             Error::INVALID_CYCLE => "Reward cycle does not exist",
             Error::INVALID_STAKE_DURATION => "Invalid stake duration",
+            Error::REWARDS_CONTRACT_NOT_SET => "Rewards contract not set",
+            Error::STAKE_NOT_FOUND => "Stake not found",
+            Error::STAKE_NOT_VESTED => "Stake not vested",
+            Error::STAKE_ALREADY_CLAIMED => "Stake already claimed",
         }
     }
 }
