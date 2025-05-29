@@ -112,7 +112,7 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         *self.vesting_time
     }
 
-    fn get_claimed(self: @StakeInfo) -> bool {
+    fn is_claimed(self: @StakeInfo) -> bool {
         *self.claimed
     }
 
