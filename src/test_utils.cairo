@@ -50,6 +50,21 @@ pub fn deploy_memecoin_staking_contract(ref cfg: TestCfg) -> ContractAddress {
     contract_address
 }
 
+pub fn deploy_memecoin_rewards_contract(ref cfg: TestCfg) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    cfg.owner.serialize(ref output: calldata);
+    cfg.staking_contract.serialize(ref output: calldata);
+    cfg.token_address.serialize(ref output: calldata);
+
+    let memecoin_rewards_contract = declare(contract: "MemeCoinRewards").unwrap().contract_class();
+    let (contract_address, _) = memecoin_rewards_contract
+        .deploy(constructor_calldata: @calldata)
+        .unwrap();
+
+    cfg.rewards_contract = contract_address;
+    contract_address
+}
+
 pub fn deploy_mock_erc20_contract(owner: ContractAddress) -> ContractAddress {
     // TODO: Use
     // https://foundry-rs.github.io/starknet-foundry/testing/using-cheatcodes.html?highlight=set_balance#cheating-erc-20-token-balance
@@ -101,9 +116,9 @@ pub fn verify_stake_info(
 pub fn memecoin_staking_test_setup() -> TestCfg {
     let mut cfg: TestCfg = Default::default();
     let owner = cfg.owner;
-    let rewards_contract = cfg.rewards_contract;
     cfg.token_address = deploy_mock_erc20_contract(:owner);
     deploy_memecoin_staking_contract(ref :cfg);
+    let rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let config_dispatcher = IMemeCoinStakingConfigDispatcher {
         contract_address: cfg.staking_contract,
