@@ -129,7 +129,7 @@ pub fn verify_stake_info(
     assert!(stake_info.get_amount() == amount);
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
-    assert!(stake_info.get_claimed() == claimed);
+    assert!(stake_info.is_claimed() == claimed);
 }
 
 pub fn memecoin_staking_test_setup() -> TestCfg {
