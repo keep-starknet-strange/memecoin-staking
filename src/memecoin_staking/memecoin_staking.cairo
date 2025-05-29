@@ -112,9 +112,7 @@ pub mod MemeCoinStaking {
         ) -> Index {
             let stake_index = self.get_next_stake_index(:staker_address, :stake_duration);
             let reward_cycle = self.get_current_reward_cycle();
-            let stake_info = StakeInfoImpl::new(
-                index: stake_index, :reward_cycle, :amount, :stake_duration,
-            );
+            let stake_info = StakeInfoImpl::new(:reward_cycle, :amount, :stake_duration);
             self.push_stake_info(:staker_address, :stake_duration, :stake_info);
             // TODO: Emit event.
             stake_index
