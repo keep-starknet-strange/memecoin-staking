@@ -15,7 +15,7 @@ pub mod MemeCoinStaking {
         Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use starkware_utils::utils::AddToStorage;
+    use starkware_utils::utils::{AddToStorage, SubFromStorage};
 
     #[storage]
     struct Storage {
@@ -114,6 +114,44 @@ pub mod MemeCoinStaking {
             // TODO: Emit event.
             rewards
         }
+
+        fn unstake(
+            ref self: ContractState, stake_duration: StakeDuration, stake_index: Index,
+        ) -> Amount {
+            let staker_address = get_caller_address();
+            let stake_info = self
+                .get_stake_info(staker_address: staker_address, :stake_duration, :stake_index);
+            assert!(stake_info.is_some(), "{}", Error::STAKE_NOT_FOUND);
+            let mut stake_info = stake_info.unwrap();
+            assert!(!stake_info.get_unstaked(), "{}", Error::STAKE_ALREADY_UNSTAKED);
+
+            let mut amount = 0;
+
+            if stake_info.get_reward_cycle() == self.current_reward_cycle.read() {
+                // Hasn't been funded, can't claim rewards.
+                self.deduct_points_from_current_reward_cycle(:stake_duration, :stake_info);
+            } else if !stake_info.is_vested() {
+                // Has been funded, but not vested, can't claim rewards.
+                self.deduct_points_from_closed_reward_cycle(:stake_duration, :stake_info);
+            } else if !stake_info.is_claimed() {
+                // Has been funded, and vested, can claim rewards.
+                amount += self.claim_rewards(:stake_duration, :stake_index);
+            }
+            // If we entered none of the above, the stake is vested, but was already claimed.
+
+            amount += self.return_stake_to_staker(:staker_address, :stake_info);
+
+            stake_info.set_unstaked();
+            self
+                .staker_info
+                .entry(key: staker_address)
+                .entry(key: stake_duration)
+                .at(index: stake_index)
+                .write(value: stake_info);
+            // TODO: Emit event.
+
+            amount
+        }
     }
 
     #[generate_trait]
@@ -211,6 +249,37 @@ pub mod MemeCoinStaking {
                 .write(value: stake_info);
 
             (reward_cycle, points)
+        }
+
+        fn deduct_points_from_current_reward_cycle(
+            ref self: ContractState, stake_duration: StakeDuration, stake_info: StakeInfo,
+        ) {
+            let amount = stake_info.get_amount();
+            let points = self.calculate_points(:stake_duration, :amount);
+
+            self.total_points_for_current_reward_cycle.sub_and_write(value: points);
+        }
+
+        fn deduct_points_from_closed_reward_cycle(
+            ref self: ContractState, stake_duration: StakeDuration, stake_info: StakeInfo,
+        ) {
+            let rewards_contract_dispatcher = self.get_rewards_contract_dispatcher();
+            let amount = stake_info.get_amount();
+            let points = self.calculate_points(:stake_duration, :amount);
+            let reward_cycle = stake_info.get_reward_cycle();
+
+            rewards_contract_dispatcher.update_total_points(points_unstaked: points, :reward_cycle);
+        }
+
+        fn return_stake_to_staker(
+            ref self: ContractState, staker_address: ContractAddress, stake_info: StakeInfo,
+        ) -> Amount {
+            let token_dispatcher = self.token_dispatcher.read();
+            let amount = stake_info.get_amount();
+            token_dispatcher.transfer(recipient: staker_address, amount: amount.into());
+            // TODO: Emit event.
+
+            amount
         }
     }
 }

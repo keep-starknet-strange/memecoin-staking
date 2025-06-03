@@ -31,6 +31,13 @@ pub trait IMemeCoinStaking<TContractState> {
     fn claim_rewards(
         ref self: TContractState, stake_duration: StakeDuration, stake_index: Index,
     ) -> Amount;
+
+    /// Unstakes a stake.
+    /// Can be called before vesting time, forfeiting the rewards.
+    /// Claims the rewards for the stake if it is vested and hasn't been claimed yet.
+    fn unstake(
+        ref self: TContractState, stake_duration: StakeDuration, stake_index: Index,
+    ) -> Amount;
 }
 
 /// Different stake durations.
@@ -77,7 +84,7 @@ pub(crate) impl StakeDurationImpl of StakeDurationTrait {
 }
 
 /// Stake info for each stake.
-#[derive(starknet::Store, Drop, Serde)]
+#[derive(starknet::Store, Drop, Serde, Copy)]
 pub struct StakeInfo {
     /// The reward cycle number.
     /// Stakes in the same reward cycle share a points / rewards ratio,
@@ -89,6 +96,8 @@ pub struct StakeInfo {
     vesting_time: Timestamp,
     /// Indicates if the stake has been claimed.
     claimed: bool,
+    /// Indicates if the stake has been unstaked.
+    unstaked: bool,
 }
 
 #[generate_trait]
@@ -97,7 +106,7 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         let time_delta = stake_duration.to_time_delta();
         assert!(time_delta.is_some(), "{}", Error::INVALID_STAKE_DURATION);
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
-        StakeInfo { reward_cycle, amount, vesting_time, claimed: false }
+        StakeInfo { reward_cycle, amount, vesting_time, claimed: false, unstaked: false }
     }
 
     fn get_reward_cycle(self: @StakeInfo) -> Cycle {
@@ -122,5 +131,13 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
 
     fn set_claimed(ref self: StakeInfo) {
         self.claimed = true;
+    }
+
+    fn get_unstaked(self: @StakeInfo) -> bool {
+        *self.unstaked
+    }
+
+    fn set_unstaked(ref self: StakeInfo) {
+        self.unstaked = true;
     }
 }
