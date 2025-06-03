@@ -94,5 +94,22 @@ pub mod MemeCoinRewards {
             // TODO: Emit event.
             rewards
         }
+
+        fn update_total_points(
+            ref self: ContractState, points_unstaked: u128, reward_cycle: Cycle,
+        ) {
+            let staking_contract = self.staking_dispatcher.read().contract_address;
+            assert!(
+                get_caller_address() == staking_contract,
+                "{}",
+                Error::CALLER_IS_NOT_STAKING_CONTRACT,
+            );
+            assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
+
+            let mut reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
+            reward_cycle_info.total_points -= points_unstaked;
+            self.reward_cycle_info.at(index: reward_cycle).write(value: reward_cycle_info);
+            // TODO: Emit event.
+        }
     }
 }
