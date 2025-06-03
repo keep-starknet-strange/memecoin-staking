@@ -15,7 +15,6 @@ pub mod MemeCoinStaking {
         Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use starkware_utils::types::time::time::Time;
     use starkware_utils::utils::AddToStorage;
 
     #[storage]
@@ -201,7 +200,7 @@ pub mod MemeCoinStaking {
                 .get_stake_info(staker_address: staker_address, :stake_duration, :stake_index);
             assert!(stake_info.is_some(), "{}", Error::STAKE_NOT_FOUND);
             let mut stake_info = stake_info.unwrap();
-            assert!(stake_info.get_vesting_time() <= Time::now(), "{}", Error::STAKE_NOT_VESTED);
+            assert!(stake_info.is_vested(), "{}", Error::STAKE_NOT_VESTED);
             assert!(!stake_info.get_claimed(), "{}", Error::STAKE_ALREADY_CLAIMED);
             stake_info.set_claimed();
             let amount = stake_info.get_amount();
