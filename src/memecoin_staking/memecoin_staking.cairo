@@ -27,8 +27,10 @@ pub mod MemeCoinStaking {
         rewards_contract_dispatcher: Option<IMemeCoinRewardsDispatcher>,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
-        /// Stores the total points for each `reward_cycle`.
-        total_points_per_reward_cycle: Vec<u128>,
+        /// Current reward cycle.
+        current_reward_cycle: Cycle,
+        /// Accumulate points for current reward cycle.
+        total_points_in_current_reward_cycle: u128,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
     }
@@ -47,7 +49,9 @@ pub mod MemeCoinStaking {
     ) {
         self.owner.write(value: owner);
         self.token_dispatcher.write(value: IERC20Dispatcher { contract_address: token_address });
-        self.total_points_per_reward_cycle.push(value: 0);
+        self.current_reward_cycle.write(value: 0);
+        self.total_points_in_current_reward_cycle.write(value: 0);
+
         // This contract's functionality is dependent on the rewards contract,
         // it needs to be set after the rewards contract is deployed.
         // This is set to None to indicate that the rewards contract is not set.
@@ -90,7 +94,7 @@ pub mod MemeCoinStaking {
         fn stake(ref self: ContractState, amount: Amount, stake_duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
             let stake_index = self.update_staker_info(:staker_address, :stake_duration, :amount);
-            self.update_total_points_per_reward_cycle(:amount, :stake_duration);
+            self.add_to_total_points_per_reward_cycle(:amount, :stake_duration);
             self.transfer_to_contract(sender: staker_address, :amount);
 
             self.emit(event: Events::NewStake { staker_address, stake_duration, stake_index });
@@ -126,14 +130,11 @@ pub mod MemeCoinStaking {
                 "{}",
                 Error::CALLER_IS_NOT_REWARDS_CONTRACT,
             );
-
-            let curr_reward_cycle = self.get_current_reward_cycle();
-            let total_points = self
-                .total_points_per_reward_cycle
-                .at(index: curr_reward_cycle)
-                .read();
+            let total_points = self.total_points_in_current_reward_cycle.read();
             assert!(total_points > 0, "{}", Error::CLOSE_EMPTY_CYCLE);
-            self.total_points_per_reward_cycle.push(value: 0);
+
+            self.current_reward_cycle.add_and_write(value: 1);
+            self.total_points_in_current_reward_cycle.write(value: 0);
 
             total_points
         }
@@ -183,7 +184,7 @@ pub mod MemeCoinStaking {
             amount: Amount,
         ) -> Index {
             let stake_index = self.get_next_stake_index(:staker_address, :stake_duration);
-            let reward_cycle = self.get_current_reward_cycle();
+            let reward_cycle = self.current_reward_cycle.read();
             let stake_info = StakeInfoImpl::new(:reward_cycle, :amount, :stake_duration);
             self.push_stake_info(:staker_address, :stake_duration, :stake_info);
 
@@ -209,14 +210,13 @@ pub mod MemeCoinStaking {
                 .push(value: stake_info);
         }
 
-        fn update_total_points_per_reward_cycle(
+        fn add_to_total_points_per_reward_cycle(
             ref self: ContractState, amount: Amount, stake_duration: StakeDuration,
         ) {
             let multiplier = stake_duration.get_multiplier();
             assert!(multiplier.is_some(), "{}", Error::INVALID_STAKE_DURATION);
             let points = amount * multiplier.unwrap().into();
-            let reward_cycle = self.get_current_reward_cycle();
-            self.total_points_per_reward_cycle.at(index: reward_cycle).add_and_write(value: points);
+            self.total_points_in_current_reward_cycle.add_and_write(value: points);
         }
 
         fn transfer_to_contract(ref self: ContractState, sender: ContractAddress, amount: Amount) {
@@ -225,12 +225,6 @@ pub mod MemeCoinStaking {
             token_dispatcher
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
-        }
-
-        fn get_current_reward_cycle(ref self: ContractState) -> Cycle {
-            // The vector is initialized in the constructor with one element,
-            // so this value will never underflow.
-            self.total_points_per_reward_cycle.len() - 1
         }
 
         fn calculate_points(

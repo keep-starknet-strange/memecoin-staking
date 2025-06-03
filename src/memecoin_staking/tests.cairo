@@ -36,6 +36,18 @@ fn test_constructor() {
         IERC20Dispatcher,
     >(contract_address: cfg.staking_contract, storage_address: selector!("token_dispatcher"));
     assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: 0,
+    );
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_in_current_reward_cycle"),
+        expected_value: 0,
+    );
 }
 
 #[test]
@@ -314,6 +326,16 @@ fn test_close_reward_cycle() {
     let total_points = staking_dispatcher.close_reward_cycle();
     reward_cycle += 1;
     assert!(total_points == calculate_points(:amount, :stake_duration));
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: reward_cycle,
+    );
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_in_current_reward_cycle"),
+        expected_value: 0,
+    );
 
     // Second stake.
     let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
@@ -326,6 +348,16 @@ fn test_close_reward_cycle() {
     let total_points = staking_dispatcher.close_reward_cycle();
     reward_cycle += 1;
     assert!(total_points == calculate_points(:amount, :stake_duration));
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: reward_cycle,
+    );
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_in_current_reward_cycle"),
+        expected_value: 0,
+    );
 
     // Verify stake info for each stake.
     for i in 0..stake_indexes.len() {
