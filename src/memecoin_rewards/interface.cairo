@@ -17,6 +17,11 @@ pub trait IMemeCoinRewards<TContractState> {
     /// to the staking contract.
     /// Can only be called by the staking contract.
     fn claim_rewards(ref self: TContractState, points: u128, reward_cycle: Cycle) -> Amount;
+
+    /// Update the total points for the given reward cycle.
+    /// Used when a staker unstakes early.
+    /// Can only be called by the Staking Contract.
+    fn update_total_points(ref self: TContractState, points_unstaked: u128, reward_cycle: Cycle);
 }
 
 pub mod Events {
