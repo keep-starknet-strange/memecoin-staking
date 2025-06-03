@@ -111,13 +111,10 @@ pub mod MemeCoinStaking {
         fn claim_rewards(
             ref self: ContractState, stake_duration: StakeDuration, stake_index: Index,
         ) -> Amount {
-            assert!(self.rewards_contract_is_set(), "{}", Error::REWARDS_CONTRACT_NOT_SET);
+            let rewards_contract_dispatcher = self.get_rewards_contract_dispatcher();
             let staker_address = get_caller_address();
             let (reward_cycle, points) = self
                 .claim_stake(:staker_address, :stake_duration, :stake_index);
-            let rewards_contract_dispatcher = IMemeCoinRewardsDispatcher {
-                contract_address: self.rewards_contract.read(),
-            };
             let token_dispatcher = self.token_dispatcher.read();
             let caller_address = get_caller_address();
 
@@ -199,6 +196,11 @@ pub mod MemeCoinStaking {
 
         fn rewards_contract_is_set(ref self: ContractState) -> bool {
             self.rewards_contract.read() != 0.try_into().unwrap()
+        }
+
+        fn get_rewards_contract_dispatcher(ref self: ContractState) -> IMemeCoinRewardsDispatcher {
+            assert!(self.rewards_contract_is_set(), "{}", Error::REWARDS_CONTRACT_NOT_SET);
+            IMemeCoinRewardsDispatcher { contract_address: self.rewards_contract.read() }
         }
 
         fn claim_stake(
