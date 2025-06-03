@@ -36,6 +36,18 @@ fn test_constructor() {
         IERC20Dispatcher,
     >(contract_address: cfg.staking_contract, storage_address: selector!("token_dispatcher"));
     assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: 0,
+    );
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_cycle_points"),
+        expected_value: 0,
+    );
 }
 
 #[test]
