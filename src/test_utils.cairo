@@ -97,6 +97,13 @@ pub fn load_value<T, +Serde<T>, +Store<T>>(
     Serde::deserialize(ref serialized: loaded_value).unwrap()
 }
 
+pub fn load_and_verify_value<T, +Serde<T>, +Store<T>, +PartialEq<T>, +Drop<T>>(
+    contract_address: ContractAddress, storage_address: felt252, expected_value: T,
+) {
+    let loaded_value: T = load_value(contract_address: contract_address, :storage_address);
+    assert!(loaded_value == expected_value);
+}
+
 pub fn approve_and_stake(
     cfg: TestCfg, staker_address: ContractAddress, amount: Amount, stake_duration: StakeDuration,
 ) -> Index {
