@@ -6,8 +6,8 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     STAKER_SUPPLY, TestCfg, advance_time, approve_and_fund, approve_and_stake, calculate_points,
-    cheat_staker_approve_staking, deploy_memecoin_staking_contract, load_value,
-    memecoin_staking_test_setup, verify_stake_info,
+    cheat_staker_approve_staking, deploy_memecoin_staking_contract, load_and_verify_value,
+    load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -19,10 +19,11 @@ fn test_constructor() {
     let mut cfg: TestCfg = Default::default();
     deploy_memecoin_staking_contract(ref :cfg);
 
-    let loaded_owner = load_value(
-        contract_address: cfg.staking_contract, storage_address: selector!("owner"),
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("owner"),
+        expected_value: cfg.owner,
     );
-    assert!(loaded_owner == cfg.owner);
 
     let loaded_token_dispatcher = load_value::<
         IERC20Dispatcher,
@@ -40,10 +41,11 @@ fn test_set_rewards_contract() {
     cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     dispatcher.set_rewards_contract(:rewards_contract);
 
-    let loaded_rewards_contract = load_value(
-        contract_address: cfg.staking_contract, storage_address: selector!("rewards_contract"),
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("rewards_contract"),
+        expected_value: rewards_contract,
     );
-    assert!(loaded_rewards_contract == rewards_contract);
 }
 
 #[test]
