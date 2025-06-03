@@ -6,8 +6,8 @@ use memecoin_staking::memecoin_rewards::interface::{
 use memecoin_staking::memecoin_staking::interface::IMemeCoinStakingDispatcher;
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_fund, approve_and_stake, calculate_points,
-    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_value,
-    memecoin_staking_test_setup,
+    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_and_verify_value,
+    load_value, memecoin_staking_test_setup,
 };
 use memecoin_staking::types::Amount;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -24,10 +24,11 @@ fn test_constructor() {
     cfg.staking_contract = deploy_memecoin_staking_contract(ref :cfg);
     cfg.rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
 
-    let loaded_funder = load_value(
-        contract_address: cfg.rewards_contract, storage_address: selector!("funder"),
+    load_and_verify_value(
+        contract_address: cfg.rewards_contract,
+        storage_address: selector!("funder"),
+        expected_value: cfg.funder,
     );
-    assert!(loaded_funder == cfg.funder);
 
     let loaded_staking_dispatcher: IMemeCoinStakingDispatcher = load_value(
         contract_address: cfg.rewards_contract, storage_address: selector!("staking_dispatcher"),
