@@ -29,6 +29,18 @@ fn test_constructor() {
         IERC20Dispatcher,
     >(contract_address: cfg.staking_contract, storage_address: selector!("token_dispatcher"));
     assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: 0,
+    );
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_for_current_reward_cycle"),
+        expected_value: 0,
+    );
 }
 
 #[test]
@@ -63,9 +75,11 @@ fn test_set_rewards_contract_wrong_caller() {
 fn test_stake() {
     let cfg = memecoin_staking_test_setup();
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let mut total_points: u128 = 0;
 
     let amount: Amount = STAKER_SUPPLY / 3;
     let stake_duration = StakeDuration::OneMonth;
+    total_points += calculate_points(:amount, :stake_duration);
     cheat_staker_approve_staking(:cfg, :amount);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
@@ -75,6 +89,7 @@ fn test_stake() {
 
     let stake_duration = StakeDuration::ThreeMonths;
     cheat_staker_approve_staking(:cfg, :amount);
+    total_points += calculate_points(:amount, :stake_duration);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
@@ -83,11 +98,24 @@ fn test_stake() {
 
     let stake_duration = StakeDuration::OneMonth;
     cheat_staker_approve_staking(:cfg, :amount);
+    total_points += calculate_points(:amount, :stake_duration);
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 1);
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: 0,
+    );
+
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_for_current_reward_cycle"),
+        expected_value: total_points,
+    );
 }
 
 #[test]
@@ -273,12 +301,27 @@ fn test_close_reward_cycle() {
     stake_indexes.append(value: stake_index);
 
     // Close the first reward cycle and verify the total points.
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_for_current_reward_cycle"),
+        expected_value: calculate_points(:amount, :stake_duration),
+    );
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
     let total_points = staking_dispatcher.close_reward_cycle();
     reward_cycle += 1;
     assert!(total_points == calculate_points(:amount, :stake_duration));
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: reward_cycle,
+    );
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_for_current_reward_cycle"),
+        expected_value: 0,
+    );
 
     // Second stake.
     let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
@@ -291,6 +334,16 @@ fn test_close_reward_cycle() {
     let total_points = staking_dispatcher.close_reward_cycle();
     reward_cycle += 1;
     assert!(total_points == calculate_points(:amount, :stake_duration));
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("current_reward_cycle"),
+        expected_value: reward_cycle,
+    );
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_for_current_reward_cycle"),
+        expected_value: 0,
+    );
 
     // Verify stake info for each stake.
     for i in 0..stake_indexes.len() {
