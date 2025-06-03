@@ -151,3 +151,37 @@ fn test_claim_rewards_invalid_cycle() {
     );
     rewards_dispatcher.claim_rewards(points: 1000, reward_cycle: 0);
 }
+
+#[test]
+fn test_update_total_points() {
+    let cfg = memecoin_staking_test_setup();
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    let staker_address = cfg.staker_address;
+
+    let amount = 1000;
+    let stake_duration = StakeDuration::OneMonth;
+    let points = calculate_points(:amount, :stake_duration);
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount: Amount = 1000;
+    approve_and_fund(:cfg, :fund_amount);
+
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    rewards_dispatcher.update_total_points(points_unstaked: points / 2, reward_cycle: 0);
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    let rewards = rewards_dispatcher.claim_rewards(points: points / 2, reward_cycle: 0);
+    assert!(rewards == fund_amount);
+}
+
+#[test]
+#[should_panic(expected: "Can only be called by the staking contract")]
+fn test_update_total_points_wrong_caller() {
+    let cfg = memecoin_staking_test_setup();
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    rewards_dispatcher.update_total_points(points_unstaked: 1000, reward_cycle: 0);
+}
