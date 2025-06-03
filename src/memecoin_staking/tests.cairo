@@ -1,9 +1,10 @@
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
-    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
+    StakeInfoImpl,
 };
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, calculate_points, cheat_staker_approve_staking,
+    TestCfg, advance_time, approve_and_stake, calculate_points, cheat_staker_approve_staking,
     deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_value,
     memecoin_staking_test_setup, verify_stake_info,
 };
@@ -319,4 +320,17 @@ fn test_get_token_address() {
 
     let token_address = staking_dispatcher.get_token_address();
     assert!(token_address == cfg.token_address);
+}
+
+#[test]
+fn test_stake_is_vested() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_info = StakeInfoImpl::new(reward_cycle, amount, stake_duration);
+    assert!(!stake_info.is_vested());
+
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    assert!(stake_info.is_vested());
 }
