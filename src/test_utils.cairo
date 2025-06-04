@@ -1,3 +1,4 @@
+use core::num::traits::Zero;
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
@@ -113,12 +114,33 @@ pub fn deploy_mock_erc20_contract(funder: ContractAddress) -> ContractAddress {
     contract_address
 }
 
+pub fn load_option_value<T, +Serde<T>, +Store<Option<T>>, +Drop<T>>(
+    contract_address: ContractAddress, storage_address: felt252,
+) -> Option<T> {
+    let size = Store::<Option<T>>::size().into();
+    let mut loaded_value = load(target: contract_address, :storage_address, :size).span();
+    deserialize_option(ref data: loaded_value)
+}
+
 pub fn load_value<T, +Serde<T>, +Store<T>>(
     contract_address: ContractAddress, storage_address: felt252,
 ) -> T {
     let size = Store::<T>::size().into();
     let mut loaded_value = load(target: contract_address, :storage_address, :size).span();
     Serde::deserialize(ref serialized: loaded_value).unwrap()
+}
+
+/// Deserialize an Option<T> from the given data.
+fn deserialize_option<T, +Serde<T>, +Drop<T>>(ref data: Span<felt252>) -> Option<T> {
+    let idx = *data.pop_front().expect('Failed pop_front');
+    // Deserialize consumes the data (i.e. the size of T is removed from the front of the data).
+    // It's important to consume it even if the Option is None, as the calling function expects it.
+    let value = Serde::<T>::deserialize(ref serialized: data).expect('Failed deserialization');
+    if idx.is_zero() {
+        return Option::None;
+    }
+    assert!(idx == 1, "Invalid Option loaded from map");
+    Option::Some(value)
 }
 
 pub fn approve_and_stake(
