@@ -24,7 +24,7 @@ pub mod MemeCoinStaking {
         /// and funding the rewards contract.
         owner: ContractAddress,
         /// The address of the rewards contract associated with the staking contract.
-        rewards_contract: ContractAddress,
+        rewards_contract: Option<ContractAddress>,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
         /// Stores the total points for each `reward_cycle`.
@@ -40,6 +40,10 @@ pub mod MemeCoinStaking {
         self.owner.write(value: owner);
         self.token_dispatcher.write(value: IERC20Dispatcher { contract_address: token_address });
         self.total_points_per_reward_cycle.push(value: 0);
+        // This contract's functionality is dependent on the rewards contract,
+        // it needs to be set after the rewards contract is deployed.
+        // This is set to None to indicate that the rewards contract is not set.
+        self.rewards_contract.write(value: None);
     }
 
     #[abi(embed_v0)]
@@ -61,7 +65,7 @@ pub mod MemeCoinStaking {
                 Error::REWARDS_TOKEN_MISMATCH,
             );
 
-            self.rewards_contract.write(value: rewards_contract);
+            self.rewards_contract.write(value: Some(rewards_contract));
             // TODO: Emit event.
         }
     }
@@ -99,11 +103,13 @@ pub mod MemeCoinStaking {
         }
 
         fn close_reward_cycle(ref self: ContractState) -> u128 {
+            let rewards_contract = self.get_rewards_contract();
             assert!(
-                get_caller_address() == self.rewards_contract.read(),
+                get_caller_address() == rewards_contract,
                 "{}",
                 Error::CALLER_IS_NOT_REWARDS_CONTRACT,
             );
+
             let curr_reward_cycle = self.get_current_reward_cycle();
             let total_points = self
                 .total_points_per_reward_cycle
@@ -114,6 +120,13 @@ pub mod MemeCoinStaking {
             // TODO: Emit event.
 
             total_points
+        }
+
+        fn get_rewards_contract(self: @ContractState) -> ContractAddress {
+            let rewards_contract = self.rewards_contract.read();
+            assert!(rewards_contract.is_some(), "{}", Error::REWARDS_CONTRACT_NOT_SET);
+
+            rewards_contract.unwrap()
         }
     }
 
