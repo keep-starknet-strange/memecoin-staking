@@ -155,6 +155,10 @@ pub mod MemeCoinStaking {
             rewards
         }
 
+        fn get_current_cycle_points(self: @ContractState) -> u128 {
+            self.total_points_in_current_reward_cycle.read()
+        }
+
         fn get_rewards_contract(self: @ContractState) -> ContractAddress {
             self.get_rewards_contract_dispatcher().contract_address
         }
