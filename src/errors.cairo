@@ -9,6 +9,8 @@ pub(crate) enum Error {
     INVALID_STAKE_DURATION,
     REWARDS_TOKEN_MISMATCH,
     STAKING_TOKEN_MISMATCH,
+    REWARDS_CONTRACT_ALREADY_SET,
+    REWARDS_CONTRACT_NOT_SET,
 }
 
 impl DescribableError of Describable<Error> {
@@ -21,6 +23,8 @@ impl DescribableError of Describable<Error> {
             Error::INVALID_STAKE_DURATION => "Invalid stake duration",
             Error::REWARDS_TOKEN_MISMATCH => "Rewards token mismatch",
             Error::STAKING_TOKEN_MISMATCH => "Staking token mismatch",
+            Error::REWARDS_CONTRACT_ALREADY_SET => "Rewards contract already set",
+            Error::REWARDS_CONTRACT_NOT_SET => "Rewards contract not set",
         }
     }
 }
