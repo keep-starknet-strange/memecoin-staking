@@ -50,6 +50,8 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             assert!(get_caller_address() == self.owner.read(), "{}", Error::CALLER_IS_NOT_OWNER);
+            let current_rewards_contract = self.rewards_contract.read();
+            assert!(current_rewards_contract.is_none(), "{}", Error::REWARDS_CONTRACT_ALREADY_SET);
 
             // TODO: Consider removing this check.
             // This is redundant, and can't be tested

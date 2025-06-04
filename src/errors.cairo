@@ -10,6 +10,7 @@ pub(crate) enum Error {
     REWARDS_TOKEN_MISMATCH,
     STAKING_TOKEN_MISMATCH,
     REWARDS_CONTRACT_NOT_SET,
+    REWARDS_CONTRACT_ALREADY_SET,
 }
 
 impl DescribableError of Describable<Error> {
@@ -23,6 +24,7 @@ impl DescribableError of Describable<Error> {
             Error::REWARDS_TOKEN_MISMATCH => "Rewards token mismatch",
             Error::STAKING_TOKEN_MISMATCH => "Staking token mismatch",
             Error::REWARDS_CONTRACT_NOT_SET => "Rewards contract not set",
+            Error::REWARDS_CONTRACT_ALREADY_SET => "Rewards contract already set",
         }
     }
 }

@@ -45,6 +45,21 @@ fn test_set_get_rewards_contract() {
 }
 
 #[test]
+#[should_panic(expected: "Rewards contract already set")]
+fn test_set_rewards_contract_already_set() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_memecoin_staking_contract(ref :cfg);
+    let rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
+    let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    dispatcher.set_rewards_contract(:rewards_contract);
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    dispatcher.set_rewards_contract(:rewards_contract);
+}
+
+#[test]
 #[should_panic(expected: "Can only be called by the owner")]
 fn test_set_rewards_contract_wrong_caller() {
     let mut cfg: TestCfg = Default::default();
