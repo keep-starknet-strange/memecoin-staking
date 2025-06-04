@@ -1,6 +1,9 @@
 #[starknet::contract]
 pub mod MemeCoinStaking {
     use memecoin_staking::errors::Error;
+    use memecoin_staking::memecoin_rewards::interface::{
+        IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
+    };
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
         StakeInfoImpl,
@@ -43,6 +46,21 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             assert!(get_caller_address() == self.owner.read(), "{}", Error::CALLER_IS_NOT_OWNER);
+
+            // TODO: Consider removing this check.
+            // This is redundant, and can't be tested
+            // since the rewards constructor will fail if the token doesn't match,
+            // but is still good to have.
+            let rewards_contract_dispatcher = IMemeCoinRewardsDispatcher {
+                contract_address: rewards_contract,
+            };
+            let token_address = rewards_contract_dispatcher.get_token_address();
+            assert!(
+                token_address == self.token_dispatcher.read().contract_address,
+                "{}",
+                Error::REWARDS_TOKEN_MISMATCH,
+            );
+
             self.rewards_contract.write(value: rewards_contract);
             // TODO: Emit event.
         }
@@ -57,6 +75,10 @@ pub mod MemeCoinStaking {
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
             index
+        }
+
+        fn get_token_address(self: @ContractState) -> ContractAddress {
+            self.token_dispatcher.read().contract_address
         }
 
         fn get_stake_info(

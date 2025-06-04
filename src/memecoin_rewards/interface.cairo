@@ -1,4 +1,5 @@
 use memecoin_staking::types::Amount;
+use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IMemeCoinRewards<TContractState> {
@@ -8,4 +9,7 @@ pub trait IMemeCoinRewards<TContractState> {
     /// Can only be called by the funder of the contract.
     /// Will fail if there are no stakes for the current reward cycle.
     fn fund(ref self: TContractState, amount: Amount);
+
+    /// Get the `ContractAddress` of the token used for rewards.
+    fn get_token_address(self: @TContractState) -> ContractAddress;
 }

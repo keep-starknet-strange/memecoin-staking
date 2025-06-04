@@ -7,6 +7,8 @@ pub(crate) enum Error {
     CALLER_IS_NOT_REWARDS_CONTRACT,
     CLOSE_EMPTY_CYCLE,
     INVALID_STAKE_DURATION,
+    REWARDS_TOKEN_MISMATCH,
+    STAKING_TOKEN_MISMATCH,
 }
 
 impl DescribableError of Describable<Error> {
@@ -17,6 +19,8 @@ impl DescribableError of Describable<Error> {
             Error::CALLER_IS_NOT_REWARDS_CONTRACT => "Can only be called by the rewards contract",
             Error::CLOSE_EMPTY_CYCLE => "Can't close reward cycle with no stakes",
             Error::INVALID_STAKE_DURATION => "Invalid stake duration",
+            Error::REWARDS_TOKEN_MISMATCH => "Rewards token mismatch",
+            Error::STAKING_TOKEN_MISMATCH => "Staking token mismatch",
         }
     }
 }

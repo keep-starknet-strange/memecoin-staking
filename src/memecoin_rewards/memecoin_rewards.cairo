@@ -42,6 +42,10 @@ pub mod MemeCoinRewards {
         staking_address: ContractAddress,
         token_address: ContractAddress,
     ) {
+        let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: staking_address };
+        let staking_token_address = staking_dispatcher.get_token_address();
+        assert!(token_address == staking_token_address, "{}", Error::STAKING_TOKEN_MISMATCH);
+
         self.funder.write(value: funder);
         self
             .staking_dispatcher
@@ -65,6 +69,10 @@ pub mod MemeCoinRewards {
                     sender: funder, recipient: get_contract_address(), amount: amount.into(),
                 );
             // TODO: Emit event.
+        }
+
+        fn get_token_address(self: @ContractState) -> ContractAddress {
+            self.token_dispatcher.read().contract_address
         }
     }
 }
