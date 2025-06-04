@@ -1,17 +1,21 @@
+use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_rewards::interface::{
     IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
 };
 use memecoin_staking::memecoin_staking::interface::{IMemeCoinStakingDispatcher, StakeDuration};
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, deploy_memecoin_rewards_contract, load_value,
-    memecoin_staking_test_setup,
+    TestCfg, approve_and_stake, deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract,
+    load_value, memecoin_staking_test_setup,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+use starkware_utils::errors::Describable;
+use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
 #[test]
 fn test_constructor() {
     let mut cfg: TestCfg = Default::default();
+    cfg.staking_contract = deploy_memecoin_staking_contract(ref :cfg);
     cfg.rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
 
     let loaded_funder = load_value(
@@ -28,6 +32,22 @@ fn test_constructor() {
         contract_address: cfg.rewards_contract, storage_address: selector!("token_dispatcher"),
     );
     assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
+}
+
+#[test]
+fn test_constructor_token_mismatch() {
+    let mut cfg: TestCfg = Default::default();
+    cfg.staking_contract = deploy_memecoin_staking_contract(ref :cfg);
+    cfg.token_address = 'ANOTHER_TOKEN'.try_into().unwrap();
+
+    let mut calldata = ArrayTrait::new();
+    cfg.funder.serialize(ref output: calldata);
+    cfg.staking_contract.serialize(ref output: calldata);
+    cfg.token_address.serialize(ref output: calldata);
+
+    let memecoin_rewards_contract = declare(contract: "MemeCoinRewards").unwrap().contract_class();
+    let result = memecoin_rewards_contract.deploy(constructor_calldata: @calldata);
+    assert_panic_with_error(result, Error::STAKING_TOKEN_MISMATCH.describe());
 }
 
 #[test]
@@ -69,4 +89,13 @@ fn test_fund_no_points() {
 
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
     rewards_dispatcher.fund(amount: 1000);
+}
+
+#[test]
+fn test_get_token_address() {
+    let cfg = memecoin_staking_test_setup();
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    let token_address = rewards_dispatcher.get_token_address();
+    assert!(token_address == cfg.token_address);
 }

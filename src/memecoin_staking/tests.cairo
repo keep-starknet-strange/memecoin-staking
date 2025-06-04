@@ -55,19 +55,6 @@ fn test_set_rewards_contract_wrong_caller() {
 }
 
 #[test]
-#[should_panic(expected: "Rewards token mismatch")]
-fn test_set_rewards_contract_token_mismatch() {
-    let mut cfg: TestCfg = Default::default();
-    deploy_memecoin_staking_contract(ref :cfg);
-    cfg.token_address = 'ANOTHER_TOKEN'.try_into().unwrap();
-    let rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
-    let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
-
-    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
-    dispatcher.set_rewards_contract(:rewards_contract);
-}
-
-#[test]
 fn test_stake() {
     let cfg = memecoin_staking_test_setup();
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
@@ -303,4 +290,13 @@ fn test_close_reward_cycle() {
             .unwrap();
         verify_stake_info(:stake_info, :reward_cycle, :amount, :stake_duration);
     }
+}
+
+#[test]
+fn test_get_token_address() {
+    let cfg = memecoin_staking_test_setup();
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let token_address = staking_dispatcher.get_token_address();
+    assert!(token_address == cfg.token_address);
 }
