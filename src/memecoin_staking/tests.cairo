@@ -4,11 +4,12 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, calculate_points, cheat_staker_approve_staking,
-    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_value,
-    memecoin_staking_test_setup, verify_stake_info,
+    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_option_value,
+    load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
+use starknet::ContractAddress;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
@@ -37,10 +38,11 @@ fn test_set_rewards_contract() {
     cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     dispatcher.set_rewards_contract(:rewards_contract);
 
-    let loaded_rewards_contract = load_value(
-        contract_address: cfg.staking_contract, storage_address: selector!("rewards_contract"),
-    );
-    assert!(loaded_rewards_contract == rewards_contract);
+    let loaded_rewards_contract = load_option_value::<
+        ContractAddress,
+    >(contract_address: cfg.staking_contract, storage_address: selector!("rewards_contract"));
+    assert!(loaded_rewards_contract.is_some());
+    assert!(loaded_rewards_contract.unwrap() == rewards_contract);
 }
 
 #[test]
