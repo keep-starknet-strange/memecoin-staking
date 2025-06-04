@@ -20,6 +20,7 @@ pub struct TestCfg {
     pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
+    pub staker_supply: Amount,
 }
 
 impl TestInitConfigDefault of Default<TestCfg> {
@@ -30,6 +31,7 @@ impl TestInitConfigDefault of Default<TestCfg> {
             staking_contract: 'STAKING_CONTRACT'.try_into().unwrap(),
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
+            staker_supply: STAKER_SUPPLY,
         }
     }
 }
@@ -113,7 +115,7 @@ pub fn memecoin_staking_test_setup() -> TestCfg {
 
     // Transfer to staker.
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
-    token_dispatcher.transfer(recipient: cfg.staker_address, amount: STAKER_SUPPLY.into());
+    token_dispatcher.transfer(recipient: cfg.staker_address, amount: cfg.staker_supply.into());
 
     cfg
 }
