@@ -66,5 +66,9 @@ pub mod MemeCoinRewards {
                 );
             // TODO: Emit event.
         }
+
+        fn get_token_address(self: @ContractState) -> ContractAddress {
+            self.token_dispatcher.read().contract_address
+        }
     }
 }
