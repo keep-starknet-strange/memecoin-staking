@@ -3,7 +3,8 @@ use memecoin_staking::memecoin_rewards::interface::{
 };
 use memecoin_staking::memecoin_staking::interface::{IMemeCoinStakingDispatcher, StakeDuration};
 use memecoin_staking::test_utils::{
-    TestCfg, approve_and_stake, deploy_memecoin_rewards_contract, load_value,
+    TestCfg, approve_and_stake, deploy_memecoin_rewards_contract,
+    deploy_memecoin_rewards_contract_expect_error, deploy_memecoin_staking_contract, load_value,
     memecoin_staking_test_setup,
 };
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -12,6 +13,7 @@ use starkware_utils_testing::test_utils::cheat_caller_address_once;
 #[test]
 fn test_constructor() {
     let mut cfg: TestCfg = Default::default();
+    cfg.staking_contract = deploy_memecoin_staking_contract(ref :cfg);
     cfg.rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
 
     let loaded_funder = load_value(
@@ -28,6 +30,16 @@ fn test_constructor() {
         contract_address: cfg.rewards_contract, storage_address: selector!("token_dispatcher"),
     );
     assert!(loaded_token_dispatcher.contract_address == cfg.token_address);
+}
+
+#[test]
+fn test_constructor_token_mismatch() {
+    let mut cfg: TestCfg = Default::default();
+    cfg.staking_contract = deploy_memecoin_staking_contract(ref :cfg);
+    cfg.token_address = 'ANOTHER_TOKEN'.try_into().unwrap();
+    deploy_memecoin_rewards_contract_expect_error(
+        ref :cfg, error_message: "Staking token mismatch",
+    );
 }
 
 #[test]

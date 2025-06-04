@@ -50,6 +50,8 @@ pub mod MemeCoinStaking {
             let current_rewards_contract = self.rewards_contract.read();
             assert!(current_rewards_contract.is_none(), "{}", Error::REWARDS_CONTRACT_ALREADY_SET);
 
+            // This is redundant, and can't be tested since the rewards constructor will fail if the
+            // token doesn't match, but is still good to have.
             let rewards_contract_dispatcher = IMemeCoinRewardsDispatcher {
                 contract_address: rewards_contract,
             };
@@ -74,6 +76,10 @@ pub mod MemeCoinStaking {
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
             index
+        }
+
+        fn get_token_address(self: @ContractState) -> ContractAddress {
+            self.token_dispatcher.read().contract_address
         }
 
         fn get_stake_info(

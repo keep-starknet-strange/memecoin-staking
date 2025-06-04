@@ -9,7 +9,7 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, load};
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
 pub const INITIAL_SUPPLY: u256 = 100000;
 pub const STAKER_SUPPLY: Amount = (INITIAL_SUPPLY / 2).try_into().unwrap();
@@ -59,6 +59,16 @@ pub fn deploy_memecoin_staking_contract(ref cfg: TestCfg) -> ContractAddress {
     contract_address
 }
 
+pub fn deploy_memecoin_staking_contract_expect_error(ref cfg: TestCfg, error_message: ByteArray) {
+    let mut calldata = ArrayTrait::new();
+    cfg.owner.serialize(ref output: calldata);
+    cfg.token_address.serialize(ref output: calldata);
+
+    let memecoin_staking_contract = declare(contract: "MemeCoinStaking").unwrap().contract_class();
+    let result = memecoin_staking_contract.deploy(constructor_calldata: @calldata);
+    assert_panic_with_error(result, error_message);
+}
+
 pub fn deploy_memecoin_rewards_contract(ref cfg: TestCfg) -> ContractAddress {
     let mut calldata = ArrayTrait::new();
     cfg.funder.serialize(ref output: calldata);
@@ -72,6 +82,17 @@ pub fn deploy_memecoin_rewards_contract(ref cfg: TestCfg) -> ContractAddress {
 
     cfg.rewards_contract = contract_address;
     contract_address
+}
+
+pub fn deploy_memecoin_rewards_contract_expect_error(ref cfg: TestCfg, error_message: ByteArray) {
+    let mut calldata = ArrayTrait::new();
+    cfg.funder.serialize(ref output: calldata);
+    cfg.staking_contract.serialize(ref output: calldata);
+    cfg.token_address.serialize(ref output: calldata);
+
+    let memecoin_rewards_contract = declare(contract: "MemeCoinRewards").unwrap().contract_class();
+    let result = memecoin_rewards_contract.deploy(constructor_calldata: @calldata);
+    assert_panic_with_error(result, error_message);
 }
 
 pub fn deploy_mock_erc20_contract(funder: ContractAddress) -> ContractAddress {
