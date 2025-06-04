@@ -11,10 +11,7 @@ use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::Time;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
-pub const INITIAL_SUPPLY: u256 = 100000;
-pub const STAKER_SUPPLY: Amount = (INITIAL_SUPPLY / 2).try_into().unwrap();
-pub const DEFAULT_STAKE: Amount = 1000;
-pub const DEFAULT_FUND: Amount = 1000;
+const INITIAL_SUPPLY: u256 = 100000;
 
 #[derive(Drop, Copy)]
 pub struct TestCfg {
@@ -39,9 +36,9 @@ impl TestInitConfigDefault of Default<TestCfg> {
             staking_contract: 'STAKING_CONTRACT'.try_into().unwrap(),
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
-            staker_supply: STAKER_SUPPLY,
-            default_stake: DEFAULT_STAKE,
-            default_fund: DEFAULT_FUND,
+            staker_supply: (INITIAL_SUPPLY / 2).try_into().unwrap(),
+            default_stake: 1000,
+            default_fund: 1000,
             dummy_address: 'DUMMY_ADDRESS'.try_into().unwrap(),
         }
     }
