@@ -1,5 +1,7 @@
+use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
+    IMemeCoinStakingConfigSafeDispatcher, IMemeCoinStakingConfigSafeDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration,
 };
 use memecoin_staking::test_utils::{
@@ -8,7 +10,8 @@ use memecoin_staking::test_utils::{
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use starkware_utils::errors::Describable;
+use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
 #[test]
 fn test_constructor() {
@@ -27,11 +30,15 @@ fn test_constructor() {
 }
 
 #[test]
+#[feature("safe_dispatcher")]
 fn test_set_rewards_contract() {
     let mut cfg: TestCfg = Default::default();
     deploy_memecoin_staking_contract(ref :cfg);
     let rewards_contract = cfg.rewards_contract;
     let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
+    let safe_dispatcher = IMemeCoinStakingConfigSafeDispatcher {
+        contract_address: cfg.staking_contract,
+    };
 
     cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     dispatcher.set_rewards_contract(:rewards_contract);
@@ -40,6 +47,12 @@ fn test_set_rewards_contract() {
         contract_address: cfg.staking_contract, storage_address: selector!("rewards_contract"),
     );
     assert!(loaded_rewards_contract == rewards_contract);
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    let result = safe_dispatcher.set_rewards_contract(:rewards_contract);
+    assert_panic_with_error(
+        :result, expected_error: Error::REWARDS_CONTRACT_ALREADY_SET.describe(),
+    );
 }
 
 #[test]

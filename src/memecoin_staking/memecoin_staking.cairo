@@ -43,6 +43,7 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             assert!(get_caller_address() == self.owner.read(), "{}", Error::CALLER_IS_NOT_OWNER);
+            assert!(!self.rewards_contract_is_set(), "{}", Error::REWARDS_CONTRACT_ALREADY_SET);
             self.rewards_contract.write(value: rewards_contract);
             // TODO: Emit event.
         }
@@ -97,6 +98,10 @@ pub mod MemeCoinStaking {
 
     #[generate_trait]
     impl InternalMemeCoinStakingImpl of InternalMemeCoinStakingTrait {
+        fn rewards_contract_is_set(ref self: ContractState) -> bool {
+            self.rewards_contract.read() != 0.try_into().unwrap()
+        }
+
         fn update_staker_info(
             ref self: ContractState,
             staker_address: ContractAddress,
