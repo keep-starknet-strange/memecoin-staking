@@ -12,26 +12,36 @@ use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 pub const INITIAL_SUPPLY: u256 = 100000;
 pub const STAKER_SUPPLY: Amount = (INITIAL_SUPPLY / 2).try_into().unwrap();
+pub const DEFAULT_STAKE: Amount = 1000;
+pub const DEFAULT_FUND: Amount = 1000;
 
 #[derive(Drop, Copy)]
 pub struct TestCfg {
     pub owner: ContractAddress,
+    pub funder: ContractAddress,
     pub rewards_contract: ContractAddress,
     pub staking_contract: ContractAddress,
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
     pub staker_supply: Amount,
+    pub default_stake: Amount,
+    pub default_fund: Amount,
+    pub dummy_address: ContractAddress,
 }
 
 impl TestInitConfigDefault of Default<TestCfg> {
     fn default() -> TestCfg {
         TestCfg {
             owner: 'OWNER'.try_into().unwrap(),
+            funder: 'FUNDER'.try_into().unwrap(),
             rewards_contract: 'REWARDS_CONTRACT'.try_into().unwrap(),
             staking_contract: 'STAKING_CONTRACT'.try_into().unwrap(),
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
             staker_supply: STAKER_SUPPLY,
+            default_stake: DEFAULT_STAKE,
+            default_fund: DEFAULT_FUND,
+            dummy_address: 'DUMMY_ADDRESS'.try_into().unwrap(),
         }
     }
 }
@@ -50,7 +60,22 @@ pub fn deploy_memecoin_staking_contract(ref cfg: TestCfg) -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_mock_erc20_contract(owner: ContractAddress) -> ContractAddress {
+pub fn deploy_memecoin_rewards_contract(ref cfg: TestCfg) -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    cfg.funder.serialize(ref output: calldata);
+    cfg.staking_contract.serialize(ref output: calldata);
+    cfg.token_address.serialize(ref output: calldata);
+
+    let memecoin_rewards_contract = declare(contract: "MemeCoinRewards").unwrap().contract_class();
+    let (contract_address, _) = memecoin_rewards_contract
+        .deploy(constructor_calldata: @calldata)
+        .unwrap();
+
+    cfg.rewards_contract = contract_address;
+    contract_address
+}
+
+pub fn deploy_mock_erc20_contract(funder: ContractAddress) -> ContractAddress {
     // TODO: Use
     // https://foundry-rs.github.io/starknet-foundry/testing/using-cheatcodes.html?highlight=set_balance#cheating-erc-20-token-balance
     let mut calldata = ArrayTrait::new();
@@ -59,7 +84,7 @@ pub fn deploy_mock_erc20_contract(owner: ContractAddress) -> ContractAddress {
     name.serialize(ref output: calldata);
     symbol.serialize(ref output: calldata);
     INITIAL_SUPPLY.serialize(ref output: calldata);
-    owner.serialize(ref output: calldata);
+    funder.serialize(ref output: calldata);
 
     let erc20_contract = declare(contract: "DualCaseERC20Mock").unwrap().contract_class();
     let (contract_address, _) = erc20_contract.deploy(constructor_calldata: @calldata).unwrap();
@@ -100,21 +125,21 @@ pub fn verify_stake_info(
 
 pub fn memecoin_staking_test_setup() -> TestCfg {
     let mut cfg: TestCfg = Default::default();
-    let owner = cfg.owner;
-    let rewards_contract = cfg.rewards_contract;
-    cfg.token_address = deploy_mock_erc20_contract(:owner);
+    let funder = cfg.funder;
+    cfg.token_address = deploy_mock_erc20_contract(:funder);
     deploy_memecoin_staking_contract(ref :cfg);
+    let rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let config_dispatcher = IMemeCoinStakingConfigDispatcher {
         contract_address: cfg.staking_contract,
     };
     cheat_caller_address_once(
-        contract_address: config_dispatcher.contract_address, caller_address: owner,
+        contract_address: config_dispatcher.contract_address, caller_address: cfg.owner,
     );
     config_dispatcher.set_rewards_contract(:rewards_contract);
 
     // Transfer to staker.
-    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: funder);
     token_dispatcher.transfer(recipient: cfg.staker_address, amount: cfg.staker_supply.into());
 
     cfg
