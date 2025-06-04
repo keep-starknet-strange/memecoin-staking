@@ -4,11 +4,12 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, calculate_points, cheat_staker_approve_staking,
-    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_value,
-    memecoin_staking_test_setup, verify_stake_info,
+    deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_option_value,
+    load_value, memecoin_staking_test_setup, verify_stake_info,
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
+use starknet::ContractAddress;
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
@@ -37,10 +38,26 @@ fn test_set_rewards_contract() {
     cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     dispatcher.set_rewards_contract(:rewards_contract);
 
-    let loaded_rewards_contract = load_value(
-        contract_address: cfg.staking_contract, storage_address: selector!("rewards_contract"),
-    );
-    assert!(loaded_rewards_contract == rewards_contract);
+    let loaded_rewards_contract = load_option_value::<
+        ContractAddress,
+    >(contract_address: cfg.staking_contract, storage_address: selector!("rewards_contract"));
+    assert!(loaded_rewards_contract.is_some());
+    assert!(loaded_rewards_contract.unwrap() == rewards_contract);
+}
+
+#[test]
+#[should_panic(expected: "Rewards contract already set")]
+fn test_set_rewards_contract_already_set() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_memecoin_staking_contract(ref :cfg);
+    let rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
+    let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    dispatcher.set_rewards_contract(:rewards_contract);
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    dispatcher.set_rewards_contract(:rewards_contract);
 }
 
 #[test]
@@ -51,19 +68,6 @@ fn test_set_rewards_contract_wrong_caller() {
     let rewards_contract = cfg.rewards_contract;
     let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
 
-    dispatcher.set_rewards_contract(:rewards_contract);
-}
-
-#[test]
-#[should_panic(expected: "Rewards token mismatch")]
-fn test_set_rewards_contract_token_mismatch() {
-    let mut cfg: TestCfg = Default::default();
-    deploy_memecoin_staking_contract(ref :cfg);
-    cfg.token_address = 'ANOTHER_TOKEN'.try_into().unwrap();
-    let rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
-    let dispatcher = IMemeCoinStakingConfigDispatcher { contract_address: cfg.staking_contract };
-
-    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     dispatcher.set_rewards_contract(:rewards_contract);
 }
 
