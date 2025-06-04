@@ -29,6 +29,9 @@ pub trait IMemeCoinStaking<TContractState> {
 
     /// Bumps current reward cycle, returns total points for the previous cycle.
     fn close_reward_cycle(ref self: TContractState) -> u128;
+
+    /// Get the `ContractAddress` of the rewards contract associated with the staking contract.
+    fn get_rewards_contract(self: @TContractState) -> ContractAddress;
 }
 
 /// Different stake durations.
