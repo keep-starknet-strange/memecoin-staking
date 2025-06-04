@@ -14,10 +14,10 @@ fn test_constructor() {
     let mut cfg: TestCfg = Default::default();
     cfg.rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
 
-    let loaded_owner = load_value(
-        contract_address: cfg.rewards_contract, storage_address: selector!("owner"),
+    let loaded_funder = load_value(
+        contract_address: cfg.rewards_contract, storage_address: selector!("funder"),
     );
-    assert!(loaded_owner == cfg.owner);
+    assert!(loaded_funder == cfg.funder);
 
     let loaded_staking_dispatcher: IMemeCoinStakingDispatcher = load_value(
         contract_address: cfg.rewards_contract, storage_address: selector!("staking_dispatcher"),
@@ -42,15 +42,15 @@ fn test_fund() {
     approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
 
     let fund_amount = 1000;
-    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.funder);
     token_dispatcher.approve(spender: cfg.rewards_contract, amount: fund_amount.into());
-    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
     rewards_dispatcher.fund(amount: fund_amount);
     assert!(token_dispatcher.balance_of(account: cfg.rewards_contract) == fund_amount.into());
 }
 
 #[test]
-#[should_panic(expected: "Can only be called by the owner")]
+#[should_panic(expected: "Can only be called by the funder")]
 fn test_fund_wrong_caller() {
     let cfg = memecoin_staking_test_setup();
     let staker_address = cfg.staker_address;
@@ -72,6 +72,6 @@ fn test_fund_no_points() {
     let cfg = memecoin_staking_test_setup();
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
-    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.owner);
+    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
     rewards_dispatcher.fund(amount: 1000);
 }

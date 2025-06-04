@@ -14,20 +14,20 @@ pub mod MemeCoinRewards {
 
     #[storage]
     struct Storage {
-        /// The contract's owner.
+        /// The contract's funder.
         /// In charge of funding this contract.
-        owner: ContractAddress,
+        funder: ContractAddress,
         /// The staking contract dispatcher.
         staking_dispatcher: IMemeCoinStakingDispatcher,
-        /// The version info for each version.
-        /// Versions are set by the owner funding this contract.
-        /// Versions set the ratio between points and rewards for stakes.
+        /// The reward cycle info for each reward cycle.
+        /// Reward cycles are set by the funder funding this contract.
+        /// Reward cycles set the ratio between points and rewards for stakes.
         reward_cycle_info: Vec<RewardCycleInfo>,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
     }
 
-    /// Stores the total rewards and points per version.
+    /// Stores the total rewards and points per reward cycle.
     /// Aids in calculating the ratio of rewards per point.
     #[derive(starknet::Store, Drop)]
     struct RewardCycleInfo {
@@ -38,11 +38,11 @@ pub mod MemeCoinRewards {
     #[constructor]
     pub fn constructor(
         ref self: ContractState,
-        owner: ContractAddress,
+        funder: ContractAddress,
         staking_address: ContractAddress,
         token_address: ContractAddress,
     ) {
-        self.owner.write(value: owner);
+        self.funder.write(value: funder);
         self
             .staking_dispatcher
             .write(value: IMemeCoinStakingDispatcher { contract_address: staking_address });
@@ -52,8 +52,8 @@ pub mod MemeCoinRewards {
     #[abi(embed_v0)]
     impl MemeCoinRewardsImpl of IMemeCoinRewards<ContractState> {
         fn fund(ref self: ContractState, amount: Amount) {
-            let owner = self.owner.read();
-            assert!(get_caller_address() == owner, "{}", Error::CALLER_IS_NOT_OWNER);
+            let funder = self.funder.read();
+            assert!(get_caller_address() == funder, "{}", Error::CALLER_IS_NOT_FUNDER);
             let total_points = self.staking_dispatcher.read().close_reward_cycle();
             self
                 .reward_cycle_info
@@ -62,7 +62,7 @@ pub mod MemeCoinRewards {
                 .token_dispatcher
                 .read()
                 .transfer_from(
-                    sender: owner, recipient: get_contract_address(), amount: amount.into(),
+                    sender: funder, recipient: get_contract_address(), amount: amount.into(),
                 );
             // TODO: Emit event.
         }
