@@ -47,6 +47,10 @@ pub mod MemeCoinStaking {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             assert!(get_caller_address() == self.owner.read(), "{}", Error::CALLER_IS_NOT_OWNER);
 
+            // TODO: Consider removing this check.
+            // This is redundant, and can't be tested
+            // since the rewards constructor will fail if the token doesn't match,
+            // but is still good to have.
             let rewards_contract_dispatcher = IMemeCoinRewardsDispatcher {
                 contract_address: rewards_contract,
             };
@@ -71,6 +75,10 @@ pub mod MemeCoinStaking {
             self.transfer_to_contract(sender: staker_address, :amount);
             // TODO: Emit event.
             index
+        }
+
+        fn get_token_address(self: @ContractState) -> ContractAddress {
+            self.token_dispatcher.read().contract_address
         }
 
         fn get_stake_info(
