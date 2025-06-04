@@ -37,11 +37,11 @@ fn test_fund() {
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
-    let amount = 1000;
+    let amount = cfg.default_stake;
     let stake_duration = StakeDuration::OneMonth;
     approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
 
-    let fund_amount = 1000;
+    let fund_amount = cfg.default_fund;
     cheat_caller_address_once(contract_address: cfg.token_address, caller_address: cfg.funder);
     token_dispatcher.approve(spender: cfg.rewards_contract, amount: fund_amount.into());
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
@@ -56,7 +56,7 @@ fn test_fund_wrong_caller() {
     let staker_address = cfg.staker_address;
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
-    let amount = 1000;
+    let amount = cfg.default_stake;
     let stake_duration = StakeDuration::OneMonth;
     approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
 

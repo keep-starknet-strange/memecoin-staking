@@ -12,6 +12,8 @@ use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 pub const INITIAL_SUPPLY: u256 = 100000;
 pub const STAKER_SUPPLY: Amount = (INITIAL_SUPPLY / 2).try_into().unwrap();
+pub const DEFAULT_STAKE: Amount = 1000;
+pub const DEFAULT_FUND: Amount = 1000;
 
 #[derive(Drop, Copy)]
 pub struct TestCfg {
@@ -22,6 +24,8 @@ pub struct TestCfg {
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
     pub staker_supply: Amount,
+    pub default_stake: Amount,
+    pub default_fund: Amount,
 }
 
 impl TestInitConfigDefault of Default<TestCfg> {
@@ -34,6 +38,8 @@ impl TestInitConfigDefault of Default<TestCfg> {
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
             staker_supply: STAKER_SUPPLY,
+            default_stake: DEFAULT_STAKE,
+            default_fund: DEFAULT_FUND,
         }
     }
 }
