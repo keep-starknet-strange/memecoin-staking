@@ -145,6 +145,11 @@ pub mod MemeCoinStaking {
             rewards
         }
 
+        fn get_current_cycle_points(self: @ContractState) -> u128 {
+            self.total_points_in_current_reward_cycle.read()
+        }
+    }
+
         fn get_rewards_contract(self: @ContractState) -> ContractAddress {
             let rewards_contract = self.rewards_contract.read();
             assert!(rewards_contract.is_some(), "{}", Error::REWARDS_CONTRACT_NOT_SET);

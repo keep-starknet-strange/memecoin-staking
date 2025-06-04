@@ -450,3 +450,26 @@ fn test_claim_rewards_rewards_contract_not_set() {
     );
     staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
 }
+
+#[test]
+fn test_get_current_cycle_points() {
+    let cfg = memecoin_staking_test_setup();
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let staker_address = cfg.staker_address;
+
+    let points = staking_dispatcher.get_current_cycle_points();
+    assert!(points == 0);
+
+    // Stake and verify points.
+    let amount = cfg.default_stake;
+    let stake_duration = StakeDuration::OneMonth;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    let points = staking_dispatcher.get_current_cycle_points();
+    assert!(points == calculate_points(:amount, :stake_duration));
+
+    // Fund and verify points.
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+    let points = staking_dispatcher.get_current_cycle_points();
+    assert!(points == 0);
+}
