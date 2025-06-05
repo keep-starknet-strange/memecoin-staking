@@ -15,7 +15,7 @@ pub mod MemeCoinStaking {
         Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
-    use starkware_utils::utils::AddToStorage;
+    use starkware_utils::utils::{AddToStorage, SubFromStorage};
 
     #[storage]
     struct Storage {
@@ -162,6 +162,41 @@ pub mod MemeCoinStaking {
             rewards
         }
 
+        fn unstake(
+            ref self: ContractState, stake_duration: StakeDuration, stake_index: Index,
+        ) -> Amount {
+            let staker_address = get_caller_address();
+            let stake_info = self.get_stake_info(:staker_address, :stake_duration, :stake_index);
+            assert!(stake_info.is_some(), "{}", Error::STAKE_NOT_FOUND);
+            let mut stake_info = stake_info.unwrap();
+            assert!(!stake_info.is_unstaked(), "{}", Error::STAKE_ALREADY_UNSTAKED);
+
+            if stake_info.get_reward_cycle() == self.current_reward_cycle.read() {
+                // Hasn't been funded, can't claim rewards.
+                self.deduct_points_from_current_reward_cycle(:stake_duration, :stake_info);
+            } else if !stake_info.is_vested() {
+                // Has been funded, but not vested, no rewards to claim.
+                self.lock_rewards(:stake_info, :stake_duration);
+            } else if !stake_info.is_claimed() {
+                // Has been funded, and vested, can claim rewards.
+                self.claim_rewards(:stake_duration, :stake_index);
+                stake_info = self
+                    .get_stake_info(:staker_address, :stake_duration, :stake_index)
+                    .unwrap();
+            }
+            // If we entered none of the above, the stake is vested, but was already claimed.
+
+            let amount = self.transfer_stake_to_staker(:staker_address, :stake_info);
+
+            self
+                .mark_stake_as_unstaked(
+                    :staker_address, :stake_duration, :stake_index, ref :stake_info,
+                );
+            // TODO: Emit event.
+
+            amount
+        }
+
         fn get_rewards_contract(self: @ContractState) -> ContractAddress {
             self.get_rewards_contract_dispatcher().contract_address
         }
@@ -290,6 +325,56 @@ pub mod MemeCoinStaking {
         fn open_new_reward_cycle(ref self: ContractState) {
             self.current_reward_cycle.add_and_write(value: 1);
             self.current_cycle_points.write(value: 0);
+        }
+
+        fn deduct_points_from_current_reward_cycle(
+            ref self: ContractState, stake_duration: StakeDuration, stake_info: StakeInfo,
+        ) {
+            let amount = stake_info.get_amount();
+            let points = self.calculate_points(:stake_duration, :amount);
+            assert!(
+                points <= self.current_cycle_points.read(),
+                "{}",
+                Error::LOCK_POINTS_EXCEEDS_CYCLE_POINTS,
+            );
+
+            self.current_cycle_points.sub_and_write(value: points);
+        }
+
+        fn transfer_stake_to_staker(
+            ref self: ContractState, staker_address: ContractAddress, stake_info: StakeInfo,
+        ) -> Amount {
+            let token_dispatcher = self.token_dispatcher.read();
+            let amount = stake_info.get_amount();
+            token_dispatcher.transfer(recipient: staker_address, amount: amount.into());
+
+            amount
+        }
+
+        fn lock_rewards(
+            self: @ContractState, stake_info: StakeInfo, stake_duration: StakeDuration,
+        ) {
+            let amount = stake_info.get_amount();
+            let points = self.calculate_points(:stake_duration, :amount);
+            let reward_cycle = stake_info.get_reward_cycle();
+            let rewards_contract_dispatcher = self.get_rewards_contract_dispatcher();
+            rewards_contract_dispatcher.lock_rewards(:points, :reward_cycle);
+        }
+
+        fn mark_stake_as_unstaked(
+            ref self: ContractState,
+            staker_address: ContractAddress,
+            stake_duration: StakeDuration,
+            stake_index: Index,
+            ref stake_info: StakeInfo,
+        ) {
+            stake_info.set_unstaked();
+            self
+                .staker_info
+                .entry(key: staker_address)
+                .entry(key: stake_duration)
+                .at(index: stake_index)
+                .write(value: stake_info);
         }
     }
 }
