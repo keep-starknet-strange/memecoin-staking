@@ -2,7 +2,7 @@ use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_rewards::interface::{
     IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
 };
-use memecoin_staking::memecoin_staking::interface::{IMemeCoinStakingDispatcher, StakeDuration};
+use memecoin_staking::memecoin_staking::interface::IMemeCoinStakingDispatcher;
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_stake, calculate_points, deploy_memecoin_rewards_contract,
     deploy_memecoin_staking_contract, load_value, memecoin_staking_test_setup,
@@ -58,8 +58,8 @@ fn test_fund() {
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
-    let amount = cfg.default_stake;
-    let stake_duration = StakeDuration::OneMonth;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
     approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
 
     let fund_amount = cfg.default_fund;

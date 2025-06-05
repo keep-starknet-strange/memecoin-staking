@@ -21,8 +21,9 @@ pub struct TestCfg {
     pub token_address: ContractAddress,
     pub staker_address: ContractAddress,
     pub staker_supply: Amount,
-    pub default_stake: Amount,
+    pub default_stake_amount: Amount,
     pub default_fund: Amount,
+    pub default_stake_duration: StakeDuration,
     pub dummy_address: ContractAddress,
 }
 
@@ -36,8 +37,9 @@ impl TestInitConfigDefault of Default<TestCfg> {
             token_address: 'TOKEN_ADDRESS'.try_into().unwrap(),
             staker_address: 'STAKER_ADDRESS'.try_into().unwrap(),
             staker_supply: (INITIAL_SUPPLY / 2).try_into().unwrap(),
-            default_stake: 1000,
+            default_stake_amount: 1000,
             default_fund: 1000,
+            default_stake_duration: StakeDuration::OneMonth,
             dummy_address: 'DUMMY_ADDRESS'.try_into().unwrap(),
         }
     }
