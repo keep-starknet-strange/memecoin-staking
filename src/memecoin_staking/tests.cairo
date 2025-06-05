@@ -1,5 +1,5 @@
 use memecoin_staking::memecoin_staking::interface::{
-    IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
+    Events, IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
     StakeInfoImpl,
 };
@@ -10,7 +10,10 @@ use memecoin_staking::test_utils::{
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
-use starkware_utils_testing::test_utils::cheat_caller_address_once;
+use snforge_std::cheatcodes::events::Event;
+use snforge_std::{EventSpyTrait, EventsFilterTrait, spy_events};
+use starknet::ContractAddress;
+use starkware_utils_testing::test_utils::{assert_expected_event_emitted, cheat_caller_address_once};
 
 #[test]
 fn test_constructor() {
@@ -74,7 +77,13 @@ fn test_set_rewards_contract_wrong_caller() {
 #[test]
 fn test_stake() {
     let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let mut spy = spy_events();
+    let stake_durations = array![
+        cfg.default_stake_duration, StakeDuration::ThreeMonths, cfg.default_stake_duration,
+    ];
+    let mut stake_indexes = array![];
 
     let amount = cfg.default_stake_amount;
     let stake_duration = cfg.default_stake_duration;
@@ -84,6 +93,7 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 0);
+    stake_indexes.append(value: stake_index);
 
     let stake_duration = StakeDuration::ThreeMonths;
     cheat_staker_approve_staking(:cfg, :amount);
@@ -92,6 +102,7 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 0);
+    stake_indexes.append(value: stake_index);
 
     let stake_duration = cfg.default_stake_duration;
     cheat_staker_approve_staking(:cfg, :amount);
@@ -100,6 +111,31 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 1);
+    stake_indexes.append(value: stake_index);
+
+    let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
+    for i in 0..stake_indexes.len() {
+        let stake_index = *stake_indexes.at(index: i);
+        let stake_duration = *stake_durations.at(index: i);
+        validate_stake_event(
+            spied_event: events[i], :staker_address, :stake_duration, :stake_index,
+        );
+    }
+}
+
+fn validate_stake_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    stake_duration: StakeDuration,
+    stake_index: Index,
+) {
+    let expected_event = Events::NewStake { staker_address, stake_duration, stake_index };
+    assert_expected_event_emitted(
+        spied_event: spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("NewStake"),
+        expected_event_name: "NewStake",
+    )
 }
 
 #[test]
