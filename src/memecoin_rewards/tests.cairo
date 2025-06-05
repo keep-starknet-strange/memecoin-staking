@@ -1,6 +1,6 @@
 use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_rewards::interface::{
-    IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
+    Events, IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
 };
 use memecoin_staking::memecoin_staking::interface::IMemeCoinStakingDispatcher;
 use memecoin_staking::test_utils::{
@@ -10,9 +10,13 @@ use memecoin_staking::test_utils::{
 };
 use memecoin_staking::types::Amount;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+use snforge_std::{
+    ContractClassTrait, DeclareResultTrait, EventSpyTrait, EventsFilterTrait, declare, spy_events,
+};
 use starkware_utils::errors::Describable;
-use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
+use starkware_utils_testing::test_utils::{
+    assert_expected_event_emitted, assert_panic_with_error, cheat_caller_address_once,
+};
 
 #[test]
 fn test_constructor() {
@@ -58,6 +62,7 @@ fn test_fund() {
     let staker_address = cfg.staker_address;
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    let mut spy = spy_events();
 
     let amount = cfg.default_stake_amount;
     let stake_duration = cfg.default_stake_duration;
@@ -69,6 +74,19 @@ fn test_fund() {
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
     rewards_dispatcher.fund(amount: fund_amount);
     assert!(token_dispatcher.balance_of(account: cfg.rewards_contract) == fund_amount.into());
+
+    let reward_cycle = 0;
+    let total_points = calculate_points(:amount, :stake_duration);
+    let expected_event = Events::RewardsFunded {
+        reward_cycle, total_points, total_rewards: fund_amount,
+    };
+    let events = spy.get_events().emitted_by(contract_address: cfg.rewards_contract).events;
+    assert_expected_event_emitted(
+        spied_event: events[0],
+        :expected_event,
+        expected_event_selector: @selector!("RewardsFunded"),
+        expected_event_name: "RewardsFunded",
+    );
 }
 
 #[test]

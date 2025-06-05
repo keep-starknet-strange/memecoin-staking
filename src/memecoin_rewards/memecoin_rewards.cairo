@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod MemeCoinRewards {
     use memecoin_staking::errors::Error;
-    use memecoin_staking::memecoin_rewards::interface::IMemeCoinRewards;
+    use memecoin_staking::memecoin_rewards::interface::{Events, IMemeCoinRewards};
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait,
     };
@@ -26,6 +26,12 @@ pub mod MemeCoinRewards {
         reward_cycle_info: Vec<RewardCycleInfo>,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    pub enum Event {
+        RewardsFunded: Events::RewardsFunded,
     }
 
     /// Stores the total rewards and points per reward cycle.
@@ -69,7 +75,15 @@ pub mod MemeCoinRewards {
                 .transfer_from(
                     sender: funder, recipient: get_contract_address(), amount: amount.into(),
                 );
-            // TODO: Emit event.
+
+            self
+                .emit(
+                    event: Events::RewardsFunded {
+                        reward_cycle: self.reward_cycle_info.len() - 1,
+                        total_points,
+                        total_rewards: amount,
+                    },
+                );
         }
 
         fn get_token_address(self: @ContractState) -> ContractAddress {
