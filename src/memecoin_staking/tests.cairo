@@ -1,5 +1,7 @@
 use memecoin_staking::errors::Error;
-use memecoin_staking::memecoin_staking::event_test_utils::validate_new_stake_event;
+use memecoin_staking::memecoin_staking::event_test_utils::{
+    validate_new_stake_event, validate_rewards_contract_set_event,
+};
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, IMemeCoinStakingSafeDispatcher,
@@ -44,12 +46,17 @@ fn test_set_get_rewards_contract() {
         contract_address: cfg.staking_contract,
     };
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let mut spy = spy_events();
 
     cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
     config_dispatcher.set_rewards_contract(:rewards_contract);
 
     let loaded_rewards_contract = staking_dispatcher.get_rewards_contract();
     assert!(loaded_rewards_contract == rewards_contract);
+
+    let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "Expected 1 event");
+    validate_rewards_contract_set_event(spied_event: events[0], :rewards_contract);
 }
 
 #[test]
