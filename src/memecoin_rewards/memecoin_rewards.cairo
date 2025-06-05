@@ -5,12 +5,13 @@ pub mod MemeCoinRewards {
     use memecoin_staking::memecoin_staking::interface::{
         IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait,
     };
-    use memecoin_staking::types::Amount;
+    use memecoin_staking::types::{Amount, Cycle};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
         MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use starkware_utils::math::utils::mul_wide_and_floor_div;
 
     #[storage]
     struct Storage {
@@ -73,6 +74,55 @@ pub mod MemeCoinRewards {
 
         fn get_token_address(self: @ContractState) -> ContractAddress {
             self.token_dispatcher.read().contract_address
+        }
+
+        fn claim_rewards(ref self: ContractState, points: u128, reward_cycle: Cycle) -> Amount {
+            let staking_contract = self.staking_dispatcher.read().contract_address;
+            assert!(
+                get_caller_address() == staking_contract,
+                "{}",
+                Error::CALLER_IS_NOT_STAKING_CONTRACT,
+            );
+            assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
+            let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
+            assert!(
+                points <= reward_cycle_info.total_points,
+                "{}",
+                Error::CLAIM_POINTS_EXCEEDS_CYCLE_POINTS,
+            );
+
+            let rewards = self.calculate_rewards(:points, :reward_cycle_info);
+            self.update_reward_cycle_info(:reward_cycle, :points, :rewards);
+
+            let token_dispatcher = self.token_dispatcher.read();
+            token_dispatcher.transfer(recipient: staking_contract, amount: rewards.into());
+
+            // TODO: Emit event.
+
+            rewards
+        }
+    }
+
+    #[generate_trait]
+    impl InternalMemeCoinRewards of InternalMemeCoinRewardsTrait {
+        fn calculate_rewards(
+            self: @ContractState, points: u128, reward_cycle_info: RewardCycleInfo,
+        ) -> Amount {
+            mul_wide_and_floor_div(
+                lhs: points,
+                rhs: reward_cycle_info.total_rewards,
+                div: reward_cycle_info.total_points,
+            )
+                .unwrap()
+        }
+
+        fn update_reward_cycle_info(
+            ref self: ContractState, reward_cycle: Cycle, points: u128, rewards: Amount,
+        ) {
+            let mut reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
+            reward_cycle_info.total_points -= points;
+            reward_cycle_info.total_rewards -= rewards;
+            self.reward_cycle_info.at(index: reward_cycle).write(value: reward_cycle_info);
         }
     }
 }

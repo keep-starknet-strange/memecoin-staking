@@ -1,4 +1,4 @@
-use memecoin_staking::types::Amount;
+use memecoin_staking::types::{Amount, Cycle};
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -12,4 +12,9 @@ pub trait IMemeCoinRewards<TContractState> {
 
     /// Get the `ContractAddress` of the token used for rewards.
     fn get_token_address(self: @TContractState) -> ContractAddress;
+
+    /// Transfer the equivalent amount of rewards for the given points and reward cycle
+    /// to the staking contract.
+    /// Can only be called by the staking contract.
+    fn claim_rewards(ref self: TContractState, points: u128, reward_cycle: Cycle) -> Amount;
 }
