@@ -18,3 +18,15 @@ pub fn validate_new_stake_event(
         expected_event_name: "NewStake",
     )
 }
+
+pub fn validate_rewards_contract_set_event(
+    spied_event: @(ContractAddress, Event), rewards_contract: ContractAddress,
+) {
+    let expected_event = Events::RewardsContractSet { rewards_contract };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("RewardsContractSet"),
+        expected_event_name: "RewardsContractSet",
+    )
+}
