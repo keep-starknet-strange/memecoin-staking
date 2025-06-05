@@ -34,8 +34,22 @@ pub trait IMemeCoinStaking<TContractState> {
     fn get_rewards_contract(self: @TContractState) -> ContractAddress;
 }
 
+pub mod Events {
+    use memecoin_staking::memecoin_staking::interface::StakeDuration;
+    use memecoin_staking::types::Index;
+    use starknet::ContractAddress;
+
+    #[derive(Debug, Drop, starknet::Event, PartialEq)]
+    pub struct NewStake {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub stake_duration: StakeDuration,
+        pub stake_index: Index,
+    }
+}
+
 /// Different stake durations.
-#[derive(starknet::Store, Drop, Hash, Serde, Copy, PartialEq)]
+#[derive(starknet::Store, Debug, Drop, Hash, Serde, Copy, PartialEq)]
 pub enum StakeDuration {
     #[default]
     None,
