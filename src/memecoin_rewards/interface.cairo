@@ -29,4 +29,10 @@ pub mod Events {
         pub total_points: u128,
         pub total_rewards: Amount,
     }
+
+    #[derive(Debug, Drop, starknet::Event, PartialEq)]
+    pub struct RewardsClaimed {
+        pub points: u128,
+        pub rewards: Amount,
+    }
 }

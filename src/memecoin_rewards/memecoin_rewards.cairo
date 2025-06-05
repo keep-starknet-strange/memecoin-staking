@@ -32,6 +32,7 @@ pub mod MemeCoinRewards {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         RewardsFunded: Events::RewardsFunded,
+        RewardsClaimed: Events::RewardsClaimed,
     }
 
     /// Stores the total rewards and points per reward cycle.
@@ -111,7 +112,7 @@ pub mod MemeCoinRewards {
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher.transfer(recipient: staking_contract, amount: rewards.into());
 
-            // TODO: Emit event.
+            self.emit(event: Events::RewardsClaimed { points, rewards });
 
             rewards
         }

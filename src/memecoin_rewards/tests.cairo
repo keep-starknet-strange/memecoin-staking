@@ -1,5 +1,7 @@
 use memecoin_staking::errors::Error;
-use memecoin_staking::memecoin_rewards::event_test_utils::validate_rewards_funded_event;
+use memecoin_staking::memecoin_rewards::event_test_utils::{
+    validate_rewards_claimed_event, validate_rewards_funded_event,
+};
 use memecoin_staking::memecoin_rewards::interface::{
     IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
 };
@@ -123,6 +125,9 @@ fn test_claim_rewards() {
     let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
     let mut staking_contract_balance: Amount = 0;
+    let mut total_points_per_cycle = array![];
+    let mut total_rewards_per_cycle = array![];
+    let mut event_indexes = array![];
 
     // Test full cycle rewards.
     let amount = cfg.default_stake_amount;
@@ -140,6 +145,9 @@ fn test_claim_rewards() {
     );
     let rewards = rewards_dispatcher.claim_rewards(:points, :reward_cycle);
     staking_contract_balance += rewards;
+    total_rewards_per_cycle.append(value: rewards);
+    total_points_per_cycle.append(value: points);
+    event_indexes.append(value: 1);
     assert!(rewards == fund_amount);
     assert!(token_dispatcher.balance_of(account: cfg.rewards_contract) == 0);
     assert!(
@@ -159,8 +167,12 @@ fn test_claim_rewards() {
     cheat_caller_address_once(
         contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
     );
+    let mut spy = spy_events();
     let rewards = rewards_dispatcher.claim_rewards(:points, :reward_cycle);
     staking_contract_balance += rewards;
+    total_rewards_per_cycle.append(value: rewards);
+    total_points_per_cycle.append(points);
+    event_indexes.append(value: 3);
     assert!(rewards == fund_amount / 2);
     assert!(token_dispatcher.balance_of(account: cfg.rewards_contract) == fund_amount.into() / 2);
     assert!(
@@ -168,6 +180,12 @@ fn test_claim_rewards() {
             .balance_of(account: cfg.staking_contract) == staking_contract_balance
             .into(),
     );
+
+    let events = spy.get_events().emitted_by(contract_address: cfg.rewards_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "Expected 1 rewards claimed event",
+    );
+    validate_rewards_claimed_event(spied_event: events[0], :points, :rewards);
 }
 
 #[test]

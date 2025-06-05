@@ -18,3 +18,15 @@ pub fn validate_rewards_funded_event(
         expected_event_name: "RewardsFunded",
     );
 }
+
+pub fn validate_rewards_claimed_event(
+    spied_event: @(ContractAddress, Event), points: u128, rewards: Amount,
+) {
+    let expected_event = Events::RewardsClaimed { points, rewards };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("RewardsClaimed"),
+        expected_event_name: "RewardsClaimed",
+    );
+}
