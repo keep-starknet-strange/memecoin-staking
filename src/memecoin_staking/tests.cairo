@@ -753,3 +753,134 @@ fn test_stake_info_unstaked_twice() {
     stake_info.set_unstaked();
     stake_info.set_unstaked();
 }
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_unstake_all_scenarios() {
+    // Setup.
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let staking_safe_dispatcher = IMemeCoinStakingSafeDispatcher {
+        contract_address: cfg.staking_contract,
+    };
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+    let mut total_points: u128 = 0;
+
+    // Stake.
+    let amount: Amount = cfg.staker_supply / 4;
+    let stake_duration = StakeDuration::ThreeMonths;
+    let unvested_stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    total_points += calculate_points(:amount, :stake_duration);
+
+    let stake_duration = StakeDuration::OneMonth;
+    let unclaimed_stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    total_points += calculate_points(:amount, :stake_duration);
+
+    let claimed_stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    total_points += calculate_points(:amount, :stake_duration);
+
+    let fund_amount = 1000;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let current_cycle_stake_index = approve_and_stake(
+        :cfg, :staker_address, :amount, :stake_duration,
+    );
+
+    // Adjust stake states.
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    let rewards = staking_dispatcher
+        .claim_rewards(:stake_duration, stake_index: claimed_stake_index);
+
+    let mut expected_staker_balance = rewards;
+    let mut expected_staking_contract_balance = amount * 4;
+    let mut expected_rewards_contract_balance = fund_amount - rewards;
+
+    // Current cycle stake.
+    let stake_duration = StakeDuration::OneMonth;
+    let stake_index = current_cycle_stake_index;
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    expected_staker_balance += amount;
+    expected_staking_contract_balance -= amount;
+    load_and_verify_value(
+        contract_address: cfg.staking_contract,
+        storage_address: selector!("total_points_for_current_reward_cycle"),
+        expected_value: 0,
+    );
+
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    let rewards_contract_balance = token_dispatcher.balance_of(account: cfg.rewards_contract);
+
+    assert!(staker_balance == expected_staker_balance.into());
+    assert!(staking_contract_balance == expected_staking_contract_balance.into());
+    assert!(rewards_contract_balance == expected_rewards_contract_balance.into());
+
+    // Unvested stake.
+    let stake_duration = StakeDuration::ThreeMonths;
+    let stake_index = unvested_stake_index;
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    expected_staker_balance += amount;
+    expected_staking_contract_balance -= amount;
+
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    let rewards_contract_balance = token_dispatcher.balance_of(account: cfg.rewards_contract);
+
+    assert!(staker_balance == expected_staker_balance.into());
+    assert!(staking_contract_balance == expected_staking_contract_balance.into());
+    assert!(rewards_contract_balance == expected_rewards_contract_balance.into());
+
+    // Unclaimed stake.
+    let stake_duration = StakeDuration::OneMonth;
+    let stake_index = unclaimed_stake_index;
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    expected_staker_balance += amount + expected_rewards_contract_balance;
+    expected_staking_contract_balance -= amount;
+    expected_rewards_contract_balance = 0;
+
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    let rewards_contract_balance = token_dispatcher.balance_of(account: cfg.rewards_contract);
+
+    assert!(staker_balance == expected_staker_balance.into());
+    assert!(staking_contract_balance == expected_staking_contract_balance.into());
+    assert!(rewards_contract_balance == expected_rewards_contract_balance.into());
+
+    // Claimed stake.
+    let stake_duration = StakeDuration::OneMonth;
+    let stake_index = claimed_stake_index;
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    expected_staker_balance += amount;
+    expected_staking_contract_balance -= amount;
+
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    let rewards_contract_balance = token_dispatcher.balance_of(account: cfg.rewards_contract);
+
+    assert!(staker_balance == expected_staker_balance.into());
+    assert!(staking_contract_balance == expected_staking_contract_balance.into());
+    assert!(rewards_contract_balance == expected_rewards_contract_balance.into());
+
+    // Unstake again.
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    let res = staking_safe_dispatcher.unstake(:stake_duration, stake_index: claimed_stake_index);
+    assert_panic_with_error(res, Error::STAKE_ALREADY_UNSTAKED.describe());
+}
