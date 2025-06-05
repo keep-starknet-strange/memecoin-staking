@@ -338,6 +338,36 @@ fn test_close_reward_cycle() {
 }
 
 #[test]
+fn test_close_reward_cycle_event() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let mut spy = spy_events();
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
+    );
+    let total_points = staking_dispatcher.close_reward_cycle();
+    let reward_cycle = 0;
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    cfg.staking_contract,
+                    MemeCoinStaking::Event::RewardCycleClosed(
+                        Events::RewardCycleClosed { reward_cycle, total_points },
+                    ),
+                ),
+            ],
+        )
+}
+
+#[test]
 fn test_get_token_address() {
     let cfg = memecoin_staking_test_setup();
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
