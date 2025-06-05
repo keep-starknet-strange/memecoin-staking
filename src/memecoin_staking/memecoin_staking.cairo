@@ -37,6 +37,7 @@ pub mod MemeCoinStaking {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         StakeCreated: Events::StakeCreated,
+        RewardCycleClosed: Events::RewardCycleClosed,
     }
 
     #[constructor]
@@ -127,7 +128,13 @@ pub mod MemeCoinStaking {
                 .read();
             assert!(total_points > 0, "{}", Error::CLOSE_EMPTY_CYCLE);
             self.total_points_per_reward_cycle.push(value: 0);
-            // TODO: Emit event.
+
+            self
+                .emit(
+                    event: Events::RewardCycleClosed {
+                        reward_cycle: curr_reward_cycle, total_points,
+                    },
+                );
 
             total_points
         }
