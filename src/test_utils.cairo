@@ -9,7 +9,8 @@ use memecoin_staking::memecoin_staking::interface::{
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, declare, load, start_cheat_block_timestamp_global,
+    CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare, load,
+    start_cheat_block_timestamp_global,
 };
 use starknet::{ContractAddress, Store};
 use starkware_utils::types::time::time::{Time, TimeDelta};
@@ -189,4 +190,14 @@ pub fn approve_and_fund(cfg: TestCfg, fund_amount: Amount) {
 
 pub fn advance_time(time_delta: TimeDelta) {
     start_cheat_block_timestamp_global(block_timestamp: Time::now().add(delta: time_delta).into());
+}
+
+pub fn cheat_caller_address_many(
+    contract_address: ContractAddress, caller_address: ContractAddress, num_calls: usize,
+) {
+    cheat_caller_address(
+        contract_address: contract_address,
+        caller_address: caller_address,
+        span: CheatSpan::TargetCalls(num_calls),
+    );
 }

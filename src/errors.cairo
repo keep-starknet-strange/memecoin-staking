@@ -17,6 +17,8 @@ pub(crate) enum Error {
     STAKE_NOT_FOUND,
     STAKE_NOT_VESTED,
     STAKE_ALREADY_CLAIMED,
+    STAKE_NOT_CLAIMED,
+    STAKE_ALREADY_UNSTAKED,
 }
 
 impl DescribableError of Describable<Error> {
@@ -37,6 +39,8 @@ impl DescribableError of Describable<Error> {
             Error::STAKE_NOT_FOUND => "Stake not found",
             Error::STAKE_NOT_VESTED => "Stake not vested",
             Error::STAKE_ALREADY_CLAIMED => "Stake already claimed",
+            Error::STAKE_NOT_CLAIMED => "Stake not claimed",
+            Error::STAKE_ALREADY_UNSTAKED => "Stake already unstaked",
         }
     }
 }
