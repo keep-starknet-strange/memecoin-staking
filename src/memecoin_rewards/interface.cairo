@@ -18,3 +18,15 @@ pub trait IMemeCoinRewards<TContractState> {
     /// Can only be called by the staking contract.
     fn claim_rewards(ref self: TContractState, points: u128, reward_cycle: Cycle) -> Amount;
 }
+
+pub mod Events {
+    use memecoin_staking::types::{Amount, Cycle};
+
+    #[derive(Drop, starknet::Event)]
+    pub struct RewardsFunded {
+        #[key]
+        pub reward_cycle: Cycle,
+        pub total_points: u128,
+        pub total_rewards: Amount,
+    }
+}
