@@ -36,7 +36,7 @@ pub trait IMemeCoinStaking<TContractState> {
 
 pub mod Events {
     use memecoin_staking::memecoin_staking::interface::StakeDuration;
-    use memecoin_staking::types::Index;
+    use memecoin_staking::types::{Cycle, Index};
     use starknet::ContractAddress;
 
     #[derive(Debug, Drop, starknet::Event, PartialEq)]
@@ -45,6 +45,12 @@ pub mod Events {
         pub staker_address: ContractAddress,
         pub stake_duration: StakeDuration,
         pub stake_index: Index,
+    }
+
+    #[derive(Debug, Drop, starknet::Event, PartialEq)]
+    pub struct ClosedRewardCycle {
+        pub reward_cycle: Cycle,
+        pub total_points: u128,
     }
 }
 
