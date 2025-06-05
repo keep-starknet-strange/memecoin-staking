@@ -1,5 +1,7 @@
 use memecoin_staking::errors::Error;
-use memecoin_staking::memecoin_staking::event_test_utils::validate_new_stake_event;
+use memecoin_staking::memecoin_staking::event_test_utils::{
+    validate_closed_reward_cycle_event, validate_new_stake_event,
+};
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, IMemeCoinStakingSafeDispatcher,
@@ -315,8 +317,8 @@ fn test_close_reward_cycle() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
+    let mut spy = spy_events();
     let total_points = staking_dispatcher.close_reward_cycle();
-    reward_cycle += 1;
     assert!(total_points == calculate_points(:amount, :stake_duration));
 
     // Verify stake info for each stake.
@@ -328,6 +330,12 @@ fn test_close_reward_cycle() {
             .unwrap();
         verify_stake_info(:stake_info, :reward_cycle, :amount, :stake_duration, claimed: false);
     }
+
+    let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "Expected 1 closed reward cycle event",
+    );
+    validate_closed_reward_cycle_event(spied_event: events[0], :reward_cycle, :total_points);
 }
 
 #[test]
