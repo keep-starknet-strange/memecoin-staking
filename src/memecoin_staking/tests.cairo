@@ -1,3 +1,4 @@
+use memecoin_staking::memecoin_staking::event_test_utils::validate_new_stake_event;
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
     IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait, StakeDuration, StakeDurationTrait,
@@ -10,6 +11,7 @@ use memecoin_staking::test_utils::{
 };
 use memecoin_staking::types::{Amount, Cycle, Index};
 use openzeppelin::token::erc20::interface::IERC20Dispatcher;
+use snforge_std::{EventSpyTrait, EventsFilterTrait, spy_events};
 use starkware_utils_testing::test_utils::cheat_caller_address_once;
 
 #[test]
@@ -74,6 +76,7 @@ fn test_set_rewards_contract_wrong_caller() {
 #[test]
 fn test_stake() {
     let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
     let amount = cfg.default_stake_amount;
@@ -93,6 +96,7 @@ fn test_stake() {
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 0);
 
+    let mut spy = spy_events();
     let stake_duration = cfg.default_stake_duration;
     cheat_staker_approve_staking(:cfg, :amount);
     cheat_caller_address_once(
@@ -100,6 +104,12 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 1);
+
+    let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
+    assert!(events.len() == 1);
+    validate_new_stake_event(
+        spied_event: events[0], :staker_address, :stake_duration, :stake_index,
+    );
 }
 
 #[test]
