@@ -190,6 +190,40 @@ fn test_claim_rewards() {
 }
 
 #[test]
+fn test_claim_rewards_event() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    let mut spy = spy_events();
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let points = calculate_points(:amount, :stake_duration);
+    let reward_cycle = 0;
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    let rewards = rewards_dispatcher.claim_rewards(:points, :reward_cycle);
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    cfg.rewards_contract,
+                    MemeCoinRewards::Event::RewardsClaimed(
+                        Events::RewardsClaimed { points, amount: rewards },
+                    ),
+                ),
+            ],
+        )
+}
+
+#[test]
 #[should_panic(expected: "Claim points exceeds cycle points")]
 fn test_claim_rewards_points_exceeds_cycle_points() {
     let cfg = memecoin_staking_test_setup();
