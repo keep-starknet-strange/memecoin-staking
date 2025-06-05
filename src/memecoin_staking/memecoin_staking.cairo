@@ -36,6 +36,7 @@ pub mod MemeCoinStaking {
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
+        RewardsContractSet: Events::RewardsContractSet,
         StakeCreated: Events::StakeCreated,
     }
 
@@ -74,7 +75,8 @@ pub mod MemeCoinStaking {
             );
 
             self.rewards_contract.write(value: Some(rewards_contract));
-            // TODO: Emit event.
+
+            self.emit(event: Events::RewardsContractSet { rewards_contract });
         }
     }
 

@@ -47,6 +47,32 @@ fn test_set_get_rewards_contract() {
 }
 
 #[test]
+fn test_set_rewards_contract_event() {
+    let mut cfg: TestCfg = Default::default();
+    deploy_memecoin_staking_contract(ref :cfg);
+    let rewards_contract = deploy_memecoin_rewards_contract(ref :cfg);
+    let config_dispatcher = IMemeCoinStakingConfigDispatcher {
+        contract_address: cfg.staking_contract,
+    };
+    let mut spy = spy_events();
+
+    cheat_caller_address_once(contract_address: cfg.staking_contract, caller_address: cfg.owner);
+    config_dispatcher.set_rewards_contract(:rewards_contract);
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    cfg.staking_contract,
+                    MemeCoinStaking::Event::RewardsContractSet(
+                        Events::RewardsContractSet { rewards_contract },
+                    ),
+                ),
+            ],
+        )
+}
+
+#[test]
 #[should_panic(expected: "Rewards contract already set")]
 fn test_set_rewards_contract_already_set() {
     let mut cfg: TestCfg = Default::default();

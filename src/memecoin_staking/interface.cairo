@@ -40,6 +40,11 @@ pub mod Events {
     use starknet::ContractAddress;
 
     #[derive(Drop, starknet::Event)]
+    pub struct RewardsContractSet {
+        pub rewards_contract: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
     pub struct StakeCreated {
         pub staker_address: ContractAddress,
         pub stake_duration: StakeDuration,
