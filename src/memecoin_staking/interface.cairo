@@ -43,6 +43,13 @@ pub trait IMemeCoinStaking<TContractState> {
 
     /// Gets the current reward cycle number.
     fn get_current_reward_cycle(self: @TContractState) -> Cycle;
+
+    /// Unstakes a stake.
+    /// Can be called before vesting time, forfeiting the rewards.
+    /// Claims the rewards for the stake if it is vested and hasn't been claimed yet.
+    fn unstake(
+        ref self: TContractState, stake_duration: StakeDuration, stake_index: Index,
+    ) -> Amount;
 }
 
 pub mod Events {
@@ -130,6 +137,8 @@ pub struct StakeInfo {
     vesting_time: Timestamp,
     /// Indicates if the stake has been claimed.
     claimed: bool,
+    /// Indicates if the stake has been unstaked.
+    unstaked: bool,
 }
 
 #[generate_trait]
@@ -138,7 +147,7 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         let time_delta = stake_duration.to_time_delta();
         assert!(time_delta.is_some(), "{}", Error::INVALID_STAKE_DURATION);
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
-        StakeInfo { reward_cycle, amount, vesting_time, claimed: false }
+        StakeInfo { reward_cycle, amount, vesting_time, claimed: false, unstaked: false }
     }
 
     fn get_reward_cycle(self: @StakeInfo) -> Cycle {
@@ -165,5 +174,15 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         assert!(self.is_vested(), "{}", Error::STAKE_NOT_VESTED);
         assert!(!self.is_claimed(), "{}", Error::STAKE_ALREADY_CLAIMED);
         self.claimed = true;
+    }
+
+    fn is_unstaked(self: @StakeInfo) -> bool {
+        *self.unstaked
+    }
+
+    fn set_unstaked(ref self: StakeInfo) {
+        assert!(!self.is_vested() || self.is_claimed(), "{}", Error::STAKE_NOT_CLAIMED);
+        assert!(!self.is_unstaked(), "{}", Error::STAKE_ALREADY_UNSTAKED);
+        self.unstaked = true;
     }
 }
