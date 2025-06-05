@@ -1,4 +1,7 @@
 use memecoin_staking::errors::Error;
+use memecoin_staking::memecoin_rewards::interface::{
+    IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
+};
 use memecoin_staking::memecoin_staking::event_test_utils::{
     validate_claimed_rewards_event, validate_new_stake_event, validate_rewards_contract_set_event,
 };
@@ -9,7 +12,7 @@ use memecoin_staking::memecoin_staking::interface::{
 };
 use memecoin_staking::test_utils::{
     TestCfg, advance_time, approve_and_fund, approve_and_stake, calculate_points,
-    cheat_staker_approve_staking, deploy_memecoin_rewards_contract,
+    cheat_caller_address_many, cheat_staker_approve_staking, deploy_memecoin_rewards_contract,
     deploy_memecoin_staking_contract, deploy_mock_erc20_contract, load_and_verify_value, load_value,
     memecoin_staking_test_setup, verify_stake_info,
 };
@@ -578,4 +581,190 @@ fn test_reward_cycle_getters() {
     assert!(points == 0);
     let current_reward_cycle = staking_dispatcher.get_current_reward_cycle();
     assert!(current_reward_cycle == 1);
+}
+
+#[test]
+fn test_unstake_current_cycle_stake() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+
+    let amount: Amount = cfg.staker_supply;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    assert!(staker_balance == amount.into());
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    assert!(staking_contract_balance == 0);
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == 0);
+}
+
+#[test]
+fn test_unstake_unvested_stake() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+
+    let amount: Amount = cfg.staker_supply;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    assert!(staker_balance == amount.into());
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    assert!(staking_contract_balance == 0);
+    let rewards_contract_balance = token_dispatcher.balance_of(account: cfg.rewards_contract);
+    assert!(rewards_contract_balance == fund_amount.into());
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == fund_amount.into());
+}
+
+#[test]
+fn test_unstake_unclaimed_stake() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+
+    let amount: Amount = cfg.staker_supply;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    assert!(staker_balance == amount.into() + fund_amount.into());
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    assert!(staking_contract_balance == 0);
+    let rewards_contract_balance = token_dispatcher.balance_of(account: cfg.rewards_contract);
+    assert!(rewards_contract_balance == 0);
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == 0);
+}
+
+#[test]
+fn test_unstake_claimed_stake() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+    let token_dispatcher = IERC20Dispatcher { contract_address: cfg.token_address };
+
+    let amount: Amount = cfg.staker_supply;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+
+    cheat_caller_address_once(
+        contract_address: cfg.staking_contract, caller_address: staker_address,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    let staker_balance = token_dispatcher.balance_of(account: staker_address);
+    assert!(staker_balance == amount.into() + fund_amount.into());
+    let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
+    assert!(staking_contract_balance == 0);
+    let rewards_contract_balance = token_dispatcher.balance_of(account: cfg.rewards_contract);
+    assert!(rewards_contract_balance == 0);
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == 0);
+}
+
+#[test]
+#[should_panic(expected: "Stake already unstaked")]
+fn test_unstake_twice() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let amount: Amount = cfg.staker_supply;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    cheat_caller_address_many(
+        contract_address: cfg.staking_contract, caller_address: staker_address, num_calls: 2,
+    );
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+}
+
+#[test]
+fn test_stake_info_unstaked() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let mut stake_info = StakeInfoImpl::new(reward_cycle, amount, stake_duration);
+    assert!(!stake_info.is_unstaked());
+
+    stake_info.set_unstaked();
+    assert!(stake_info.is_unstaked());
+}
+
+#[test]
+#[should_panic(expected: "Stake already unstaked")]
+fn test_stake_info_unstaked_twice() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let mut stake_info = StakeInfoImpl::new(reward_cycle, amount, stake_duration);
+
+    stake_info.set_unstaked();
+    stake_info.set_unstaked();
+}
+
+#[test]
+fn test_stake_info_unstaked_before_vesting() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let mut stake_info = StakeInfoImpl::new(reward_cycle, amount, stake_duration);
+
+    stake_info.set_unstaked();
+    assert!(stake_info.is_unstaked());
+}
+
+#[test]
+#[should_panic(expected: "Stake not claimed")]
+fn test_stake_info_unstaked_before_claimed() {
+    let cfg: TestCfg = Default::default();
+    let reward_cycle = 0;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let mut stake_info = StakeInfoImpl::new(reward_cycle, amount, stake_duration);
+
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    stake_info.set_unstaked();
 }
