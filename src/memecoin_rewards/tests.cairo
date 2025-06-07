@@ -111,8 +111,8 @@ fn test_claim_rewards() {
     let mut staking_contract_balance: Amount = 0;
 
     // Test full cycle rewards.
-    let amount = cfg.default_stake;
-    let stake_duration = StakeDuration::OneMonth;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
     approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
     staking_contract_balance += amount;
 
@@ -163,8 +163,8 @@ fn test_claim_rewards_points_exceeds_cycle_points() {
     let staker_address = cfg.staker_address;
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
 
-    let amount = cfg.default_stake;
-    let stake_duration = StakeDuration::OneMonth;
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
     approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
 
     let fund_amount = cfg.default_fund;
