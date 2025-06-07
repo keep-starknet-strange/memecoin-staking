@@ -1,7 +1,8 @@
 use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_rewards::interface::{
-    IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
+    Events, IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
 };
+use memecoin_staking::memecoin_rewards::memecoin_rewards::MemeCoinRewards;
 use memecoin_staking::memecoin_staking::interface::IMemeCoinStakingDispatcher;
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_fund, approve_and_stake, calculate_points,
@@ -10,7 +11,9 @@ use memecoin_staking::test_utils::{
 };
 use memecoin_staking::types::Amount;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+use snforge_std::{
+    ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, spy_events,
+};
 use starkware_utils::errors::Describable;
 use starkware_utils_testing::test_utils::{assert_panic_with_error, cheat_caller_address_once};
 
@@ -69,6 +72,36 @@ fn test_fund() {
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
     rewards_dispatcher.fund(amount: fund_amount);
     assert!(token_dispatcher.balance_of(account: cfg.rewards_contract) == fund_amount.into());
+}
+
+#[test]
+fn test_fund_event() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let mut spy = spy_events();
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let reward_cycle = 0;
+    let total_points = calculate_points(:amount, :stake_duration);
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    cfg.rewards_contract,
+                    MemeCoinRewards::Event::RewardCycleFunded(
+                        Events::RewardCycleFunded {
+                            reward_cycle, total_points, total_rewards: fund_amount,
+                        },
+                    ),
+                ),
+            ],
+        )
 }
 
 #[test]
