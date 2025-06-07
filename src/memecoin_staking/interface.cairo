@@ -110,4 +110,8 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
     fn get_vesting_time(self: @StakeInfo) -> Timestamp {
         *self.vesting_time
     }
+
+    fn is_vested(self: @StakeInfo) -> bool {
+        Time::now() >= self.get_vesting_time()
+    }
 }
