@@ -23,7 +23,18 @@ jobs:
           curl -L https://raw.githubusercontent.com/software-mansion/cairo-coverage/main/scripts/install.sh | sh
 
       - name: Run test and coverage
-        run: scarb test -w --coverage
+        run: |
+          mkdir logs
+          scarb test -w --coverage 2>logs/stderr.log | tee logs/stdout.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+
+          if grep -q "warn:" logs/stderr.log; then
+            echo "❌ Warnings detected during test run:"
+            cat logs/stderr.log
+            exit 1
+          fi
+
+          exit $TEST_EXIT_CODE
 
       - uses: codecov/codecov-action@v5.3.1
         with:
