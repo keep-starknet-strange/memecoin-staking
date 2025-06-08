@@ -23,8 +23,8 @@ pub mod MemeCoinStaking {
         /// The owner is responsible for setting,
         /// and funding the rewards contract.
         owner: ContractAddress,
-        /// The address of the rewards contract associated with the staking contract.
-        rewards_contract: Option<ContractAddress>,
+        /// The dispatcher of the rewards contract associated with the staking contract.
+        rewards_contract_dispatcher: Option<IMemeCoinRewardsDispatcher>,
         /// Stores the stake info per stake for each staker.
         staker_info: Map<ContractAddress, Map<StakeDuration, Vec<StakeInfo>>>,
         /// Stores the total points for each `reward_cycle`.
@@ -43,15 +43,19 @@ pub mod MemeCoinStaking {
         // This contract's functionality is dependent on the rewards contract,
         // it needs to be set after the rewards contract is deployed.
         // This is set to None to indicate that the rewards contract is not set.
-        self.rewards_contract.write(value: None);
+        self.rewards_contract_dispatcher.write(value: None);
     }
 
     #[abi(embed_v0)]
     impl MemeCoinStakingConfigImpl of IMemeCoinStakingConfig<ContractState> {
         fn set_rewards_contract(ref self: ContractState, rewards_contract: ContractAddress) {
             assert!(get_caller_address() == self.owner.read(), "{}", Error::CALLER_IS_NOT_OWNER);
-            let current_rewards_contract = self.rewards_contract.read();
-            assert!(current_rewards_contract.is_none(), "{}", Error::REWARDS_CONTRACT_ALREADY_SET);
+            let current_rewards_contract_dispatcher = self.rewards_contract_dispatcher.read();
+            assert!(
+                current_rewards_contract_dispatcher.is_none(),
+                "{}",
+                Error::REWARDS_CONTRACT_ALREADY_SET,
+            );
 
             // TODO: Consider removing this check.
             // This is redundant, and can't be tested
@@ -67,7 +71,7 @@ pub mod MemeCoinStaking {
                 Error::REWARDS_TOKEN_MISMATCH,
             );
 
-            self.rewards_contract.write(value: Some(rewards_contract));
+            self.rewards_contract_dispatcher.write(value: Some(rewards_contract_dispatcher));
             // TODO: Emit event.
         }
     }
@@ -125,10 +129,10 @@ pub mod MemeCoinStaking {
         }
 
         fn get_rewards_contract(self: @ContractState) -> ContractAddress {
-            let rewards_contract = self.rewards_contract.read();
+            let rewards_contract = self.rewards_contract_dispatcher.read();
             assert!(rewards_contract.is_some(), "{}", Error::REWARDS_CONTRACT_NOT_SET);
 
-            rewards_contract.unwrap()
+            rewards_contract.unwrap().contract_address
         }
     }
 
