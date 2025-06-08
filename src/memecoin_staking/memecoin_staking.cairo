@@ -37,6 +37,7 @@ pub mod MemeCoinStaking {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         NewStake: Events::NewStake,
+        ClaimedRewards: Events::ClaimedRewards,
     }
 
     #[constructor]
@@ -150,7 +151,12 @@ pub mod MemeCoinStaking {
             let token_dispatcher = self.token_dispatcher.read();
             token_dispatcher.transfer(recipient: staker_address, amount: rewards.into());
 
-            // TODO: Emit event.
+            self
+                .emit(
+                    event: Events::ClaimedRewards {
+                        staker_address, stake_duration, stake_index, rewards,
+                    },
+                );
             rewards
         }
 
