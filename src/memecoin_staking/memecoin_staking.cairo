@@ -41,6 +41,7 @@ pub mod MemeCoinStaking {
         RewardsContractSet: Events::RewardsContractSet,
         NewStake: Events::NewStake,
         ClaimedRewards: Events::ClaimedRewards,
+        StakeUnstaked: Events::StakeUnstaked,
     }
 
     #[constructor]
@@ -192,7 +193,8 @@ pub mod MemeCoinStaking {
                 .mark_stake_as_unstaked(
                     :staker_address, :stake_duration, :stake_index, ref :stake_info,
                 );
-            // TODO: Emit event.
+
+            self.emit(event: Events::StakeUnstaked { staker_address, stake_duration, stake_index });
 
             amount
         }

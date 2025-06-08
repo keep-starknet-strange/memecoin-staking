@@ -48,3 +48,18 @@ pub fn validate_claimed_rewards_event(
         expected_event_name: "ClaimedRewards",
     )
 }
+
+pub fn validate_stake_unstaked_event(
+    spied_event: @(ContractAddress, Event),
+    staker_address: ContractAddress,
+    stake_duration: StakeDuration,
+    stake_index: Index,
+) {
+    let expected_event = Events::StakeUnstaked { staker_address, stake_duration, stake_index };
+    assert_expected_event_emitted(
+        spied_event: spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("StakeUnstaked"),
+        expected_event_name: "StakeUnstaked",
+    )
+}
