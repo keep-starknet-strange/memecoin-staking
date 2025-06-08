@@ -1,6 +1,6 @@
 use memecoin_staking::errors::Error;
 use memecoin_staking::memecoin_staking::event_test_utils::{
-    validate_new_stake_event, validate_rewards_contract_set_event,
+    validate_claimed_rewards_event, validate_new_stake_event, validate_rewards_contract_set_event,
 };
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
@@ -390,6 +390,7 @@ fn test_claim_rewards_sanity() {
 
     // Claim rewards after vesting time.
     advance_time(time_delta: one_second);
+    let mut spy = spy_events();
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
@@ -404,6 +405,15 @@ fn test_claim_rewards_sanity() {
     );
     let res = staking_safe_dispatcher.claim_rewards(:stake_duration, :stake_index);
     assert_panic_with_error(res, Error::STAKE_ALREADY_CLAIMED.describe());
+
+    // Verify event.
+    let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "Expected 1 claimed rewards event",
+    );
+    validate_claimed_rewards_event(
+        spied_event: events[0], :staker_address, :stake_duration, :stake_index, :rewards,
+    );
 }
 
 #[test]
