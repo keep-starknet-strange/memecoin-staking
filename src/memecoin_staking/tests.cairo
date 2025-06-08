@@ -4,6 +4,7 @@ use memecoin_staking::memecoin_rewards::interface::{
 };
 use memecoin_staking::memecoin_staking::event_test_utils::{
     validate_claimed_rewards_event, validate_new_stake_event, validate_rewards_contract_set_event,
+    validate_stake_unstaked_event,
 };
 use memecoin_staking::memecoin_staking::interface::{
     IMemeCoinStakingConfigDispatcher, IMemeCoinStakingConfigDispatcherTrait,
@@ -595,6 +596,7 @@ fn test_unstake_current_cycle_stake() {
     let stake_duration = cfg.default_stake_duration;
     let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
 
+    let mut spy = spy_events();
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
@@ -605,6 +607,12 @@ fn test_unstake_current_cycle_stake() {
     assert!(staking_contract_balance == 0);
     let locked_rewards = rewards_dispatcher.get_locked_rewards();
     assert!(locked_rewards == 0);
+
+    let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "Expected 1 event");
+    validate_stake_unstaked_event(
+        spied_event: events[0], :staker_address, :stake_duration, :stake_index,
+    );
 }
 
 #[test]
