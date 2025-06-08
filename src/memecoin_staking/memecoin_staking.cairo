@@ -5,8 +5,8 @@ pub mod MemeCoinStaking {
         IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
     };
     use memecoin_staking::memecoin_staking::interface::{
-        IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait, StakeInfo,
-        StakeInfoImpl,
+        Events, IMemeCoinStaking, IMemeCoinStakingConfig, StakeDuration, StakeDurationTrait,
+        StakeInfo, StakeInfoImpl,
     };
     use memecoin_staking::types::{Amount, Cycle, Index};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -31,6 +31,12 @@ pub mod MemeCoinStaking {
         total_points_per_reward_cycle: Vec<u128>,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    pub enum Event {
+        NewStake: Events::NewStake,
     }
 
     #[constructor]
@@ -80,11 +86,13 @@ pub mod MemeCoinStaking {
     impl MemeCoinStakingImpl of IMemeCoinStaking<ContractState> {
         fn stake(ref self: ContractState, amount: Amount, stake_duration: StakeDuration) -> Index {
             let staker_address = get_caller_address();
-            let index = self.update_staker_info(:staker_address, :stake_duration, :amount);
+            let stake_index = self.update_staker_info(:staker_address, :stake_duration, :amount);
             self.update_total_points_per_reward_cycle(:amount, :stake_duration);
             self.transfer_to_contract(sender: staker_address, :amount);
-            // TODO: Emit event.
-            index
+
+            self.emit(event: Events::NewStake { staker_address, stake_duration, stake_index });
+
+            stake_index
         }
 
         fn get_token_address(self: @ContractState) -> ContractAddress {
