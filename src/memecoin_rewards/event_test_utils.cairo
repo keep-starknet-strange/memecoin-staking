@@ -18,3 +18,18 @@ pub fn validate_rewards_funded_event(
         expected_event_name: "RewardsFunded",
     );
 }
+
+pub fn validate_updated_total_points_event(
+    spied_event: @(ContractAddress, Event),
+    reward_cycle: Cycle,
+    points_unstaked: u128,
+    total_points: u128,
+) {
+    let expected_event = Events::UpdatedTotalPoints { reward_cycle, points_unstaked, total_points };
+    assert_expected_event_emitted(
+        :spied_event,
+        :expected_event,
+        expected_event_selector: @selector!("UpdatedTotalPoints"),
+        expected_event_name: "UpdatedTotalPoints",
+    );
+}

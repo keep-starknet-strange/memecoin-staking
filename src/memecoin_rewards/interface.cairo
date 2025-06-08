@@ -34,4 +34,11 @@ pub mod Events {
         pub total_points: u128,
         pub total_rewards: Amount,
     }
+
+    #[derive(Debug, Drop, starknet::Event, PartialEq)]
+    pub struct UpdatedTotalPoints {
+        pub reward_cycle: Cycle,
+        pub points_unstaked: u128,
+        pub total_points: u128,
+    }
 }

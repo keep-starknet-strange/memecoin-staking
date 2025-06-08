@@ -1,5 +1,7 @@
 use memecoin_staking::errors::Error;
-use memecoin_staking::memecoin_rewards::event_test_utils::validate_rewards_funded_event;
+use memecoin_staking::memecoin_rewards::event_test_utils::{
+    validate_rewards_funded_event, validate_updated_total_points_event,
+};
 use memecoin_staking::memecoin_rewards::interface::{
     IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
 };
@@ -227,15 +229,25 @@ fn test_update_total_points() {
     let fund_amount = cfg.default_fund;
     approve_and_fund(:cfg, :fund_amount);
 
+    let mut spy = spy_events();
+    let points_to_unstake = points / 2;
     cheat_caller_address_once(
         contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
     );
-    rewards_dispatcher.update_total_points(points_unstaked: points / 2, reward_cycle: 0);
+    rewards_dispatcher.update_total_points(points_unstaked: points_to_unstake, reward_cycle: 0);
     cheat_caller_address_once(
         contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
     );
-    let rewards = rewards_dispatcher.claim_rewards(points: points / 2, reward_cycle: 0);
+    let rewards = rewards_dispatcher.claim_rewards(points: points_to_unstake, reward_cycle: 0);
     assert!(rewards == fund_amount);
+
+    // Verify event.
+    let events = spy.get_events().emitted_by(contract_address: cfg.rewards_contract).events;
+    assert_number_of_events(actual: events.len(), expected: 1, message: "Expected 1 event");
+    let total_points = points - points_to_unstake;
+    validate_updated_total_points_event(
+        spied_event: events[0], reward_cycle: 0, points_unstaked: points_to_unstake, :total_points,
+    );
 }
 
 #[test]

@@ -32,11 +32,12 @@ pub mod MemeCoinRewards {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         RewardsFunded: Events::RewardsFunded,
+        UpdatedTotalPoints: Events::UpdatedTotalPoints,
     }
 
     /// Stores the total rewards and points per reward cycle.
     /// Aids in calculating the ratio of rewards per point.
-    #[derive(starknet::Store, Drop)]
+    #[derive(starknet::Store, Drop, Copy)]
     struct RewardCycleInfo {
         total_rewards: Amount,
         total_points: u128,
@@ -130,7 +131,13 @@ pub mod MemeCoinRewards {
             let mut reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
             reward_cycle_info.total_points -= points_unstaked;
             self.reward_cycle_info.at(index: reward_cycle).write(value: reward_cycle_info);
-            // TODO: Emit event.
+
+            self
+                .emit(
+                    event: Events::UpdatedTotalPoints {
+                        reward_cycle, points_unstaked, total_points: reward_cycle_info.total_points,
+                    },
+                );
         }
     }
 
