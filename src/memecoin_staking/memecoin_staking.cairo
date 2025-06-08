@@ -179,7 +179,7 @@ pub mod MemeCoinStaking {
             let reward_cycle = self.get_current_reward_cycle();
             let stake_info = StakeInfoImpl::new(:reward_cycle, :amount, :stake_duration);
             self.push_stake_info(:staker_address, :stake_duration, :stake_info);
-            // TODO: Emit event.
+
             stake_index
         }
 
