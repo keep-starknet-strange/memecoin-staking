@@ -133,8 +133,7 @@ pub mod MemeCoinStaking {
             let total_points = self.current_cycle_points.read();
             assert!(total_points > 0, "{}", Error::CLOSE_EMPTY_CYCLE);
 
-            self.current_reward_cycle.add_and_write(value: 1);
-            self.current_cycle_points.write(value: 0);
+            self.open_new_reward_cycle();
 
             total_points
         }
@@ -286,6 +285,11 @@ pub mod MemeCoinStaking {
             let rewards = rewards_contract_dispatcher.claim_rewards(:points, :reward_cycle);
 
             rewards
+        }
+
+        fn open_new_reward_cycle(ref self: ContractState) {
+            self.current_reward_cycle.add_and_write(value: 1);
+            self.current_cycle_points.write(value: 0);
         }
     }
 }
