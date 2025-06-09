@@ -170,6 +170,12 @@ pub mod MemeCoinStaking {
             let reward_cycle = self.get_current_reward_cycle();
             self.total_points_per_reward_cycle.at(index: reward_cycle).read()
         }
+
+        fn get_current_reward_cycle(self: @ContractState) -> Cycle {
+            // The vector is initialized in the constructor with one element,
+            // so this value will never underflow.
+            self.total_points_per_reward_cycle.len() - 1
+        }
     }
 
     #[generate_trait]
@@ -230,12 +236,6 @@ pub mod MemeCoinStaking {
             token_dispatcher
                 .transfer_from(:sender, recipient: contract_address, amount: amount.into());
             // TODO: Maybe emit event.
-        }
-
-        fn get_current_reward_cycle(self: @ContractState) -> Cycle {
-            // The vector is initialized in the constructor with one element,
-            // so this value will never underflow.
-            self.total_points_per_reward_cycle.len() - 1
         }
 
         fn calculate_points(
