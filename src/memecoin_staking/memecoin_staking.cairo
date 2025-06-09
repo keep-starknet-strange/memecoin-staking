@@ -233,7 +233,7 @@ pub mod MemeCoinStaking {
         }
 
         fn calculate_points(
-            ref self: ContractState, stake_duration: StakeDuration, amount: Amount,
+            self: @ContractState, stake_duration: StakeDuration, amount: Amount,
         ) -> u128 {
             let multiplier = stake_duration.get_multiplier();
             assert!(multiplier.is_some(), "{}", Error::INVALID_STAKE_DURATION);
