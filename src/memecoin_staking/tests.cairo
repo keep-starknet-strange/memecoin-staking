@@ -108,6 +108,7 @@ fn test_stake() {
     let staker_address = cfg.staker_address;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
     let mut expected_points: u128 = 0;
+    let mut expected_stake_index: Index = 0;
 
     let amount = cfg.default_stake_amount;
     let stake_duration = cfg.default_stake_duration;
@@ -116,7 +117,8 @@ fn test_stake() {
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
-    assert!(stake_index == 0);
+    assert!(stake_index == expected_stake_index);
+    expected_stake_index += 1;
     expected_points += calculate_points(:amount, :stake_duration);
     let points = staking_dispatcher.get_current_reward_cycle_points();
     assert!(points == expected_points);
@@ -127,7 +129,8 @@ fn test_stake() {
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
-    assert!(stake_index == 0);
+    assert!(stake_index == expected_stake_index);
+    expected_stake_index += 1;
     expected_points += calculate_points(:amount, :stake_duration);
     let points = staking_dispatcher.get_current_reward_cycle_points();
     assert!(points == expected_points);
@@ -139,7 +142,8 @@ fn test_stake() {
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
-    assert!(stake_index == 1);
+    assert!(stake_index == expected_stake_index);
+    expected_stake_index += 1;
     expected_points += calculate_points(:amount, :stake_duration);
     let points = staking_dispatcher.get_current_reward_cycle_points();
     assert!(points == expected_points);
@@ -148,9 +152,7 @@ fn test_stake() {
     assert_number_of_events(
         actual: events.len(), expected: 1, message: "Expected 1 new stake event",
     );
-    validate_new_stake_event(
-        spied_event: events[0], :staker_address, :stake_duration, :stake_index,
-    );
+    validate_new_stake_event(spied_event: events[0], :staker_address, :stake_index);
 }
 
 #[test]
@@ -177,9 +179,7 @@ fn test_get_stake_info_same_duration() {
     for i in 0..10_u32 {
         let stake_index = *stake_indexes.at(index: i);
         let amount = *stake_amounts.at(index: i);
-        let stake_info = staking_dispatcher
-            .get_stake_info(:staker_address, :stake_duration, :stake_index)
-            .unwrap();
+        let stake_info = staking_dispatcher.get_stake_info(:staker_address, :stake_index).unwrap();
         verify_stake_info(:stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false);
     }
 }
@@ -216,9 +216,7 @@ fn test_get_stake_info_different_durations() {
     for i in 0..10_u32 {
         let stake_index = *stake_indexes.at(index: i);
         let stake_duration = *stake_durations.at(index: i);
-        let stake_info = staking_dispatcher
-            .get_stake_info(:staker_address, :stake_duration, :stake_index)
-            .unwrap();
+        let stake_info = staking_dispatcher.get_stake_info(:staker_address, :stake_index).unwrap();
         verify_stake_info(:stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false);
     }
 }
@@ -231,41 +229,19 @@ fn test_get_stake_info_not_exist() {
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
     // Verify that the stake info does not exist before staking.
-    let stake_info = staking_dispatcher
-        .get_stake_info(
-            :staker_address, stake_duration: cfg.default_stake_duration, stake_index: 0,
-        );
+    let stake_info = staking_dispatcher.get_stake_info(:staker_address, stake_index: 0);
     assert!(stake_info.is_none());
 
     // Stake and verify existence.
     let amount = cfg.default_stake_amount;
     let stake_duration = cfg.default_stake_duration;
     let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
-    let stake_info = staking_dispatcher
-        .get_stake_info(:staker_address, :stake_duration, :stake_index);
+    let stake_info = staking_dispatcher.get_stake_info(:staker_address, :stake_index);
     assert!(stake_info.is_some());
 
     // Verify that the stake info does not exist for future index.
-    let stake_info = staking_dispatcher
-        .get_stake_info(
-            :staker_address, stake_duration: cfg.default_stake_duration, stake_index: 1,
-        );
+    let stake_info = staking_dispatcher.get_stake_info(:staker_address, stake_index: 1);
     assert!(stake_info.is_none());
-
-    // Verify that the stake info does not exist for other stake durations.
-    let stake_durations = array![
-        StakeDuration::ThreeMonths, StakeDuration::SixMonths, StakeDuration::TwelveMonths,
-    ];
-    for i in 0..stake_durations.len() {
-        let stake_duration = *stake_durations.at(index: i);
-        let stake_info = staking_dispatcher
-            .get_stake_info(:staker_address, :stake_duration, stake_index: 0);
-        assert!(stake_info.is_none());
-
-        let stake_info = staking_dispatcher
-            .get_stake_info(:staker_address, :stake_duration, stake_index: 1);
-        assert!(stake_info.is_none());
-    }
 }
 
 #[test]
@@ -374,9 +350,7 @@ fn test_close_reward_cycle() {
     for i in 0..stake_indexes.len() {
         let stake_index: Index = *stake_indexes.at(index: i);
         let reward_cycle: Cycle = i.into();
-        let stake_info = staking_dispatcher
-            .get_stake_info(:staker_address, :stake_duration, :stake_index)
-            .unwrap();
+        let stake_info = staking_dispatcher.get_stake_info(:staker_address, :stake_index).unwrap();
         verify_stake_info(:stake_info, :reward_cycle, :amount, :stake_duration, claimed: false);
     }
 }
@@ -435,7 +409,7 @@ fn test_claim_rewards_sanity() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let res = staking_safe_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    let res = staking_safe_dispatcher.claim_rewards(:stake_index);
     assert_panic_with_error(res, Error::STAKE_NOT_VESTED.describe());
 
     // Claim rewards after vesting time.
@@ -444,7 +418,7 @@ fn test_claim_rewards_sanity() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let rewards = staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    let rewards = staking_dispatcher.claim_rewards(:stake_index);
     assert!(rewards == fund_amount);
     let staker_balance = token_dispatcher.balance_of(account: staker_address);
     assert!(staker_balance == fund_amount.into());
@@ -455,7 +429,7 @@ fn test_claim_rewards_sanity() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    let res = staking_safe_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    let res = staking_safe_dispatcher.claim_rewards(:stake_index);
     assert_panic_with_error(res, Error::STAKE_ALREADY_CLAIMED.describe());
 
     // Verify event.
@@ -463,9 +437,7 @@ fn test_claim_rewards_sanity() {
     assert_number_of_events(
         actual: events.len(), expected: 1, message: "Expected 1 claimed rewards event",
     );
-    validate_claimed_rewards_event(
-        spied_event: events[0], :staker_address, :stake_duration, :stake_index, :rewards,
-    );
+    validate_claimed_rewards_event(spied_event: events[0], :staker_address, :stake_index, :rewards);
 }
 
 #[test]
@@ -474,13 +446,11 @@ fn test_claim_rewards_not_found() {
     let cfg = memecoin_staking_test_setup();
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
 
-    let stake_duration = cfg.default_stake_duration;
     let stake_index = 0;
-
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.staker_address,
     );
-    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    staking_dispatcher.claim_rewards(:stake_index);
 }
 
 #[test]
@@ -500,7 +470,7 @@ fn test_claim_rewards_rewards_contract_not_set() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
-    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    staking_dispatcher.claim_rewards(:stake_index);
 }
 
 #[test]
@@ -600,7 +570,7 @@ fn test_unstake_current_cycle_stake() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
-    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    staking_dispatcher.unstake(:stake_index);
     let staker_balance = token_dispatcher.balance_of(account: staker_address);
     assert!(staker_balance == amount.into());
     let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
@@ -610,9 +580,7 @@ fn test_unstake_current_cycle_stake() {
 
     let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
     assert_number_of_events(actual: events.len(), expected: 1, message: "Expected 1 event");
-    validate_stake_unstaked_event(
-        spied_event: events[0], :staker_address, :stake_duration, :stake_index,
-    );
+    validate_stake_unstaked_event(spied_event: events[0], :staker_address, :stake_index);
 }
 
 #[test]
@@ -633,7 +601,7 @@ fn test_unstake_unvested_stake() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
-    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    staking_dispatcher.unstake(:stake_index);
     let staker_balance = token_dispatcher.balance_of(account: staker_address);
     assert!(staker_balance == amount.into());
     let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
@@ -663,7 +631,7 @@ fn test_unstake_unclaimed_stake() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
-    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    staking_dispatcher.unstake(:stake_index);
     let staker_balance = token_dispatcher.balance_of(account: staker_address);
     assert!(staker_balance == amount.into() + fund_amount.into());
     let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
@@ -692,12 +660,12 @@ fn test_unstake_claimed_stake() {
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
-    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    staking_dispatcher.claim_rewards(:stake_index);
 
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: staker_address,
     );
-    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    staking_dispatcher.unstake(:stake_index);
     let staker_balance = token_dispatcher.balance_of(account: staker_address);
     assert!(staker_balance == amount.into() + fund_amount.into());
     let staking_contract_balance = token_dispatcher.balance_of(account: cfg.staking_contract);
@@ -724,8 +692,8 @@ fn test_unstake_twice() {
         caller_address: staker_address,
         span: CheatSpan::TargetCalls(2),
     );
-    staking_dispatcher.unstake(:stake_duration, :stake_index);
-    staking_dispatcher.unstake(:stake_duration, :stake_index);
+    staking_dispatcher.unstake(:stake_index);
+    staking_dispatcher.unstake(:stake_index);
 }
 
 #[test]
