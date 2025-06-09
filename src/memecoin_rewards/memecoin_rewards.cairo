@@ -8,10 +8,11 @@ pub mod MemeCoinRewards {
     use memecoin_staking::types::{Amount, Cycle};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
-        MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
+        MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::math::utils::mul_wide_and_floor_div;
+    use starkware_utils::utils::AddToStorage;
 
     #[storage]
     struct Storage {
@@ -26,6 +27,8 @@ pub mod MemeCoinRewards {
         reward_cycle_info: Vec<RewardCycleInfo>,
         /// The token dispatcher.
         token_dispatcher: IERC20Dispatcher,
+        /// Tally of amount of rewards locked.
+        locked_rewards: Amount,
     }
 
     #[event]
@@ -108,6 +111,19 @@ pub mod MemeCoinRewards {
 
             rewards
         }
+
+        fn lock_rewards(ref self: ContractState, points: u128, reward_cycle: Cycle) {
+            self.assert_caller_is_staking_contract();
+            let reward_cycle_info = self.assert_cycle_rewards_lockable(:reward_cycle, :points);
+
+            let rewards = self.calculate_rewards(:points, :reward_cycle_info);
+            self.update_reward_cycle_info(:reward_cycle, :points, :rewards);
+            self.locked_rewards.add_and_write(value: rewards);
+        }
+
+        fn get_locked_rewards(self: @ContractState) -> Amount {
+            self.locked_rewards.read()
+        }
     }
 
     #[generate_trait]
@@ -141,6 +157,20 @@ pub mod MemeCoinRewards {
             );
 
             staking_contract
+        }
+
+        fn assert_cycle_rewards_lockable(
+            self: @ContractState, reward_cycle: Cycle, points: u128,
+        ) -> RewardCycleInfo {
+            assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
+            let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
+            assert!(
+                points <= reward_cycle_info.total_points,
+                "{}",
+                Error::LOCK_POINTS_EXCEEDS_CYCLE_POINTS,
+            );
+
+            reward_cycle_info
         }
     }
 }
