@@ -95,11 +95,7 @@ pub mod MemeCoinRewards {
 
         fn claim_rewards(ref self: ContractState, points: u128, reward_cycle: Cycle) -> Amount {
             let staking_contract = self.staking_dispatcher.read().contract_address;
-            assert!(
-                get_caller_address() == staking_contract,
-                "{}",
-                Error::CALLER_IS_NOT_STAKING_CONTRACT,
-            );
+            self.assert_caller_is_staking_contract(caller: get_caller_address());
             assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
             let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
             assert!(
@@ -170,6 +166,11 @@ pub mod MemeCoinRewards {
             );
 
             reward_cycle_info
+        }
+
+        fn assert_caller_is_staking_contract(self: @ContractState, caller: ContractAddress) {
+            let staking_contract = self.staking_dispatcher.read().contract_address;
+            assert!(caller == staking_contract, "{}", Error::CALLER_IS_NOT_STAKING_CONTRACT);
         }
     }
 }
