@@ -141,6 +141,8 @@ pub struct StakeInfo {
     reward_cycle: Cycle,
     /// The amount staked.
     amount: Amount,
+    /// The stake duration.
+    stake_duration: StakeDuration,
     /// The vesting time (the time when rewards can be claimed for this stake).
     vesting_time: Timestamp,
     /// Indicates if the stake has been claimed.
@@ -155,7 +157,9 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
         let time_delta = stake_duration.to_time_delta();
         assert!(time_delta.is_some(), "{}", Error::INVALID_STAKE_DURATION);
         let vesting_time = Time::now().add(delta: time_delta.unwrap());
-        StakeInfo { reward_cycle, amount, vesting_time, claimed: false, unstaked: false }
+        StakeInfo {
+            reward_cycle, amount, stake_duration, vesting_time, claimed: false, unstaked: false,
+        }
     }
 
     fn get_reward_cycle(self: @StakeInfo) -> Cycle {
@@ -164,6 +168,10 @@ pub(crate) impl StakeInfoImpl of StakeInfoTrait {
 
     fn get_amount(self: @StakeInfo) -> Amount {
         *self.amount
+    }
+
+    fn get_stake_duration(self: @StakeInfo) -> StakeDuration {
+        *self.stake_duration
     }
 
     fn get_vesting_time(self: @StakeInfo) -> Timestamp {
