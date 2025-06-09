@@ -213,3 +213,79 @@ fn test_claim_rewards_invalid_cycle() {
     );
     rewards_dispatcher.claim_rewards(points: 0, reward_cycle: 0);
 }
+
+#[test]
+fn test_lock_rewards() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == 0);
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let points = calculate_points(:amount, :stake_duration) / 2;
+    let reward_cycle = 0;
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    rewards_dispatcher.lock_rewards(:points, :reward_cycle);
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == fund_amount / 2);
+
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    rewards_dispatcher.lock_rewards(:points, :reward_cycle);
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == fund_amount);
+}
+
+#[test]
+#[should_panic(expected: "Can only be called by the staking contract")]
+fn test_lock_rewards_wrong_caller() {
+    let cfg = memecoin_staking_test_setup();
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    rewards_dispatcher.lock_rewards(points: 0, reward_cycle: 0);
+}
+
+#[test]
+#[should_panic(expected: "Reward cycle does not exist")]
+fn test_lock_rewards_invalid_cycle() {
+    let cfg = memecoin_staking_test_setup();
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    rewards_dispatcher.lock_rewards(points: 0, reward_cycle: 0);
+}
+
+#[test]
+#[should_panic(expected: "Lock points exceeds cycle points")]
+fn test_lock_rewards_points_exceeds_cycle_points() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let points = calculate_points(:amount, :stake_duration) + 1;
+    let reward_cycle = 0;
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    rewards_dispatcher.lock_rewards(:points, :reward_cycle);
+}
