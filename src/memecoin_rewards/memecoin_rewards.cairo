@@ -66,8 +66,7 @@ pub mod MemeCoinRewards {
     #[abi(embed_v0)]
     impl MemeCoinRewardsImpl of IMemeCoinRewards<ContractState> {
         fn fund(ref self: ContractState, amount: Amount) {
-            let funder = self.funder.read();
-            assert!(get_caller_address() == funder, "{}", Error::CALLER_IS_NOT_FUNDER);
+            let funder = self.assert_caller_is_funder();
             let total_points = self.staking_dispatcher.read().close_reward_cycle();
             self
                 .reward_cycle_info
@@ -178,6 +177,12 @@ pub mod MemeCoinRewards {
             );
 
             reward_cycle_info
+        }
+
+        fn assert_caller_is_funder(self: @ContractState) -> ContractAddress {
+            let funder = self.funder.read();
+            assert!(get_caller_address() == funder, "{}", Error::CALLER_IS_NOT_FUNDER);
+            funder
         }
     }
 }
