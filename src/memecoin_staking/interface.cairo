@@ -21,10 +21,7 @@ pub trait IMemeCoinStaking<TContractState> {
 
     /// Get info for a specific stake for `staker_address`.
     fn get_stake_info(
-        self: @TContractState,
-        staker_address: ContractAddress,
-        stake_duration: StakeDuration,
-        stake_index: Index,
+        self: @TContractState, staker_address: ContractAddress, stake_index: Index,
     ) -> Option<StakeInfo>;
 
     /// Bumps current reward cycle, returns total points for the previous cycle.
@@ -34,9 +31,7 @@ pub trait IMemeCoinStaking<TContractState> {
     fn get_rewards_contract(self: @TContractState) -> ContractAddress;
 
     /// Claims the rewards for a specific stake.
-    fn claim_rewards(
-        ref self: TContractState, stake_duration: StakeDuration, stake_index: Index,
-    ) -> Amount;
+    fn claim_rewards(ref self: TContractState, stake_index: Index) -> Amount;
 
     /// Gets the total points for the current reward cycle.
     fn get_current_reward_cycle_points(self: @TContractState) -> u128;
@@ -47,13 +42,10 @@ pub trait IMemeCoinStaking<TContractState> {
     /// Unstakes a stake.
     /// Can be called before vesting time, forfeiting the rewards.
     /// Claims the rewards for the stake if it is vested and hasn't been claimed yet.
-    fn unstake(
-        ref self: TContractState, stake_duration: StakeDuration, stake_index: Index,
-    ) -> Amount;
+    fn unstake(ref self: TContractState, stake_index: Index) -> Amount;
 }
 
 pub mod Events {
-    use memecoin_staking::memecoin_staking::interface::StakeDuration;
     use memecoin_staking::types::{Amount, Index};
     use starknet::ContractAddress;
 
@@ -67,7 +59,6 @@ pub mod Events {
     pub struct NewStake {
         #[key]
         pub staker_address: ContractAddress,
-        pub stake_duration: StakeDuration,
         pub stake_index: Index,
     }
 
@@ -75,7 +66,6 @@ pub mod Events {
     pub struct ClaimedRewards {
         #[key]
         pub staker_address: ContractAddress,
-        pub stake_duration: StakeDuration,
         pub stake_index: Index,
         pub rewards: Amount,
     }
@@ -84,7 +74,6 @@ pub mod Events {
     pub struct StakeUnstaked {
         #[key]
         pub staker_address: ContractAddress,
-        pub stake_duration: StakeDuration,
         pub stake_index: Index,
     }
 }
