@@ -37,6 +37,9 @@ pub trait IMemeCoinStaking<TContractState> {
     fn claim_rewards(
         ref self: TContractState, stake_duration: StakeDuration, stake_index: Index,
     ) -> Amount;
+
+    /// Gets the total points for the current reward cycle.
+    fn get_current_reward_cycle_points(self: @TContractState) -> u128;
 }
 
 pub mod Events {
