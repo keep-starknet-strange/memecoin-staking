@@ -8,7 +8,7 @@ pub mod MemeCoinRewards {
     use memecoin_staking::types::{Amount, Cycle};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::storage::{
-        MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
+        MutableVecTrait, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use starkware_utils::math::utils::mul_wide_and_floor_div;
@@ -93,13 +93,7 @@ pub mod MemeCoinRewards {
         fn claim_rewards(ref self: ContractState, points: u128, reward_cycle: Cycle) -> Amount {
             let staking_contract = self.staking_dispatcher.read().contract_address;
             self.assert_caller_is_staking_contract(caller: get_caller_address());
-            assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
-            let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
-            assert!(
-                points <= reward_cycle_info.total_points,
-                "{}",
-                Error::CLAIM_POINTS_EXCEEDS_CYCLE_POINTS,
-            );
+            let reward_cycle_info = self.assert_rewards_are_claimable(:points, :reward_cycle);
 
             let rewards = self.calculate_rewards(:points, :reward_cycle_info);
             self.update_reward_cycle_info(:reward_cycle, :points, :rewards);
@@ -136,6 +130,20 @@ pub mod MemeCoinRewards {
         fn assert_caller_is_staking_contract(self: @ContractState, caller: ContractAddress) {
             let staking_contract = self.staking_dispatcher.read().contract_address;
             assert!(caller == staking_contract, "{}", Error::CALLER_IS_NOT_STAKING_CONTRACT);
+        }
+
+        fn assert_rewards_are_claimable(
+            self: @ContractState, points: u128, reward_cycle: Cycle,
+        ) -> RewardCycleInfo {
+            assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
+            let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
+            assert!(
+                points <= reward_cycle_info.total_points,
+                "{}",
+                Error::CLAIM_POINTS_EXCEEDS_CYCLE_POINTS,
+            );
+
+            reward_cycle_info
         }
     }
 }
