@@ -91,6 +91,7 @@ fn test_stake() {
     let cfg = memecoin_staking_test_setup();
     let staker_address = cfg.staker_address;
     let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let mut expected_points: u128 = 0;
 
     let amount = cfg.default_stake_amount;
     let stake_duration = cfg.default_stake_duration;
@@ -100,6 +101,9 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 0);
+    expected_points += calculate_points(:amount, :stake_duration);
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
 
     let stake_duration = StakeDuration::ThreeMonths;
     cheat_staker_approve_staking(:cfg, :amount);
@@ -108,6 +112,9 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 0);
+    expected_points += calculate_points(:amount, :stake_duration);
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
 
     let mut spy = spy_events();
     let stake_duration = cfg.default_stake_duration;
@@ -117,6 +124,9 @@ fn test_stake() {
     );
     let stake_index = staking_dispatcher.stake(:amount, :stake_duration);
     assert!(stake_index == 1);
+    expected_points += calculate_points(:amount, :stake_duration);
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
 
     let events = spy.get_events().emitted_by(contract_address: cfg.staking_contract).events;
     assert_number_of_events(
@@ -301,31 +311,44 @@ fn test_close_reward_cycle() {
     let mut stake_indexes: Array<Index> = array![];
     let stake_duration = cfg.default_stake_duration;
     let mut reward_cycle = 0;
+    let mut expected_points: u128 = 0;
 
     // First stake.
     let amount = cfg.default_stake_amount;
     let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
     stake_indexes.append(value: stake_index);
+    expected_points += calculate_points(:amount, :stake_duration);
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
 
     // Close the first reward cycle and verify the total points.
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
     let total_points = staking_dispatcher.close_reward_cycle();
+    assert!(total_points == expected_points);
     reward_cycle += 1;
-    assert!(total_points == calculate_points(:amount, :stake_duration));
+    expected_points = 0;
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
 
     // Second stake.
     let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
     stake_indexes.append(value: stake_index);
+    expected_points += calculate_points(:amount, :stake_duration);
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
 
     // Close the second reward cycle and verify the total points.
     cheat_caller_address_once(
         contract_address: cfg.staking_contract, caller_address: cfg.rewards_contract,
     );
     let total_points = staking_dispatcher.close_reward_cycle();
+    assert!(total_points == expected_points);
     reward_cycle += 1;
-    assert!(total_points == calculate_points(:amount, :stake_duration));
+    expected_points = 0;
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
 
     // Verify stake info for each stake.
     for i in 0..stake_indexes.len() {
@@ -379,6 +402,8 @@ fn test_claim_rewards_sanity() {
 
     let fund_amount = cfg.default_fund;
     approve_and_fund(:cfg, :fund_amount);
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == 0);
 
     // Claim rewards before vesting time.
     let one_second = TimeDelta { seconds: 1 };
@@ -399,6 +424,8 @@ fn test_claim_rewards_sanity() {
     assert!(rewards == fund_amount);
     let staker_balance = token_dispatcher.balance_of(account: staker_address);
     assert!(staker_balance == fund_amount.into());
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == 0);
 
     // Claim rewards again.
     cheat_caller_address_once(
@@ -490,4 +517,37 @@ fn test_stake_info_claimed_twice() {
     advance_time(time_delta: stake_duration.to_time_delta().unwrap());
     stake_info.set_claimed();
     stake_info.set_claimed();
+}
+
+#[test]
+fn test_get_current_reward_cycle_points() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let mut expected_points: u128 = 0;
+
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    expected_points += calculate_points(:amount, :stake_duration);
+
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
+
+    let amount = cfg.default_stake_amount * 2;
+    let stake_duration = StakeDuration::TwelveMonths;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+    expected_points += calculate_points(:amount, :stake_duration);
+
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == expected_points);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let points = staking_dispatcher.get_current_reward_cycle_points();
+    assert!(points == 0);
 }
