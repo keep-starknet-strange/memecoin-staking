@@ -65,19 +65,29 @@ pub mod MemeCoinRewards {
 
     #[abi(embed_v0)]
     impl MemeCoinRewardsImpl of IMemeCoinRewards<ContractState> {
-        fn fund(ref self: ContractState, amount: Amount) {
+        fn fund(ref self: ContractState, amount: Amount, use_locked_rewards: bool) {
             let funder = self.funder.read();
             assert!(get_caller_address() == funder, "{}", Error::CALLER_IS_NOT_FUNDER);
+            let mut amount = amount;
+
+            if use_locked_rewards {
+                assert!(amount == 0, "{}", Error::NONZERO_AMOUNT_WITH_LOCKED_REWARDS);
+                amount = self.locked_rewards.read();
+                assert!(amount > 0, "{}", Error::NO_LOCKED_REWARDS_TO_FUND);
+                self.locked_rewards.write(value: 0);
+            } else {
+                self
+                    .token_dispatcher
+                    .read()
+                    .transfer_from(
+                        sender: funder, recipient: get_contract_address(), amount: amount.into(),
+                    );
+            }
+
             let total_points = self.staking_dispatcher.read().close_reward_cycle();
             self
                 .reward_cycle_info
                 .push(value: RewardCycleInfo { total_rewards: amount, total_points });
-            self
-                .token_dispatcher
-                .read()
-                .transfer_from(
-                    sender: funder, recipient: get_contract_address(), amount: amount.into(),
-                );
 
             self
                 .emit(
