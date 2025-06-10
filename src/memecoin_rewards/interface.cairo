@@ -8,7 +8,9 @@ pub trait IMemeCoinRewards<TContractState> {
     /// and starts a new one.
     /// Can only be called by the funder of the contract.
     /// Will fail if there are no stakes for the current reward cycle.
-    fn fund(ref self: TContractState, amount: Amount);
+    /// If `use_locked_rewards` is true, the amount will be taken from the locked rewards.
+    /// If `use_locked_rewards` is used, `amount` must be 0.
+    fn fund(ref self: TContractState, amount: Amount, use_locked_rewards: bool);
 
     /// Get the `ContractAddress` of the token used for rewards.
     fn get_token_address(self: @TContractState) -> ContractAddress;
