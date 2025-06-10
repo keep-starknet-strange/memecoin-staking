@@ -100,13 +100,7 @@ pub mod MemeCoinRewards {
                 "{}",
                 Error::CALLER_IS_NOT_STAKING_CONTRACT,
             );
-            assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
-            let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
-            assert!(
-                points <= reward_cycle_info.total_points,
-                "{}",
-                Error::CLAIM_POINTS_EXCEEDS_CYCLE_POINTS,
-            );
+            let reward_cycle_info = self.assert_rewards_are_claimable(:points, :reward_cycle);
 
             let rewards = self.calculate_rewards(:points, :reward_cycle_info);
             self.update_reward_cycle_info(:reward_cycle, :points, :rewards);
@@ -167,6 +161,20 @@ pub mod MemeCoinRewards {
                 points <= reward_cycle_info.total_points,
                 "{}",
                 Error::LOCK_POINTS_EXCEEDS_CYCLE_POINTS,
+            );
+
+            reward_cycle_info
+        }
+
+        fn assert_rewards_are_claimable(
+            self: @ContractState, points: u128, reward_cycle: Cycle,
+        ) -> RewardCycleInfo {
+            assert!(reward_cycle < self.reward_cycle_info.len(), "{}", Error::INVALID_CYCLE);
+            let reward_cycle_info = self.reward_cycle_info.at(index: reward_cycle).read();
+            assert!(
+                points <= reward_cycle_info.total_points,
+                "{}",
+                Error::CLAIM_POINTS_EXCEEDS_CYCLE_POINTS,
             );
 
             reward_cycle_info
