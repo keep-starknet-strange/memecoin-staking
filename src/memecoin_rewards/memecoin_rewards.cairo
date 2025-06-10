@@ -68,10 +68,8 @@ pub mod MemeCoinRewards {
         fn fund(ref self: ContractState, amount: Amount) {
             let funder = self.funder.read();
             assert!(get_caller_address() == funder, "{}", Error::CALLER_IS_NOT_FUNDER);
-            let total_points = self.staking_dispatcher.read().close_reward_cycle();
-            self
-                .reward_cycle_info
-                .push(value: RewardCycleInfo { total_rewards: amount, total_points });
+
+            let total_points = self.close_reward_cycle(:amount);
             self
                 .token_dispatcher
                 .read()
@@ -79,14 +77,7 @@ pub mod MemeCoinRewards {
                     sender: funder, recipient: get_contract_address(), amount: amount.into(),
                 );
 
-            self
-                .emit(
-                    event: Events::RewardsFunded {
-                        reward_cycle: self.reward_cycle_info.len() - 1,
-                        total_points,
-                        total_rewards: amount,
-                    },
-                );
+            self.emit_rewards_funded_event(:total_points, :amount);
         }
 
         fn get_token_address(self: @ContractState) -> ContractAddress {
@@ -127,6 +118,19 @@ pub mod MemeCoinRewards {
 
         fn get_locked_rewards(self: @ContractState) -> Amount {
             self.locked_rewards.read()
+        }
+
+        fn fund_using_locked_rewards(ref self: ContractState) {
+            let caller = get_caller_address();
+            let funder = self.funder.read();
+            assert!(caller == funder, "{}", Error::CALLER_IS_NOT_FUNDER);
+            let amount = self.locked_rewards.read();
+            assert!(amount > 0, "{}", Error::NO_LOCKED_REWARDS_TO_FUND);
+
+            let total_points = self.close_reward_cycle(:amount);
+            self.locked_rewards.write(value: 0);
+
+            self.emit_rewards_funded_event(:total_points, :amount);
         }
     }
 
@@ -178,6 +182,26 @@ pub mod MemeCoinRewards {
             );
 
             reward_cycle_info
+        }
+
+        fn close_reward_cycle(ref self: ContractState, amount: Amount) -> u128 {
+            let total_points = self.staking_dispatcher.read().close_reward_cycle();
+            self
+                .reward_cycle_info
+                .push(value: RewardCycleInfo { total_rewards: amount, total_points });
+
+            total_points
+        }
+
+        fn emit_rewards_funded_event(ref self: ContractState, total_points: u128, amount: Amount) {
+            self
+                .emit(
+                    event: Events::RewardsFunded {
+                        reward_cycle: self.reward_cycle_info.len() - 1,
+                        total_points,
+                        total_rewards: amount,
+                    },
+                );
         }
     }
 }

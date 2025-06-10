@@ -3,7 +3,9 @@ use memecoin_staking::memecoin_rewards::event_test_utils::validate_rewards_funde
 use memecoin_staking::memecoin_rewards::interface::{
     IMemeCoinRewardsDispatcher, IMemeCoinRewardsDispatcherTrait,
 };
-use memecoin_staking::memecoin_staking::interface::IMemeCoinStakingDispatcher;
+use memecoin_staking::memecoin_staking::interface::{
+    IMemeCoinStakingDispatcher, IMemeCoinStakingDispatcherTrait,
+};
 use memecoin_staking::test_utils::{
     TestCfg, approve_and_fund, approve_and_stake, calculate_points,
     deploy_memecoin_rewards_contract, deploy_memecoin_staking_contract, load_and_verify_value,
@@ -288,4 +290,68 @@ fn test_lock_rewards_points_exceeds_cycle_points() {
         contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
     );
     rewards_dispatcher.lock_rewards(:points, :reward_cycle);
+}
+
+#[test]
+fn test_fund_locked_rewards() {
+    // Setup.
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    // Stake, fund, and lock rewards.
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let points = calculate_points(:amount, :stake_duration);
+    let reward_cycle = 0;
+    cheat_caller_address_once(
+        contract_address: cfg.rewards_contract, caller_address: cfg.staking_contract,
+    );
+    rewards_dispatcher.lock_rewards(:points, :reward_cycle);
+
+    // Stake in new cycle, and fund using locked rewards.
+    approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let mut spy = spy_events();
+    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
+    rewards_dispatcher.fund_using_locked_rewards();
+
+    let locked_rewards = rewards_dispatcher.get_locked_rewards();
+    assert!(locked_rewards == 0);
+    let current_reward_cycle = staking_dispatcher.get_current_reward_cycle();
+    assert!(current_reward_cycle == 2);
+
+    let total_points = calculate_points(:amount, :stake_duration);
+    let events = spy.get_events().emitted_by(contract_address: cfg.rewards_contract).events;
+    assert_number_of_events(
+        actual: events.len(), expected: 1, message: "Expected 1 rewards funded event",
+    );
+    validate_rewards_funded_event(
+        spied_event: events[0], reward_cycle: 1, :total_points, total_rewards: fund_amount,
+    );
+}
+
+#[test]
+#[should_panic(expected: "Can only be called by the funder")]
+fn test_fund_using_locked_rewards_wrong_caller() {
+    let cfg = memecoin_staking_test_setup();
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    rewards_dispatcher.fund_using_locked_rewards();
+}
+
+#[test]
+#[should_panic(expected: "No locked rewards to fund")]
+fn test_fund_using_locked_rewards_no_locked_rewards() {
+    let cfg = memecoin_staking_test_setup();
+    let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
+
+    cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
+    rewards_dispatcher.fund_using_locked_rewards();
 }

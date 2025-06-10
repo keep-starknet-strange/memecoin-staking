@@ -18,6 +18,7 @@ pub(crate) enum Error {
     STAKE_NOT_VESTED,
     STAKE_ALREADY_CLAIMED,
     LOCK_POINTS_EXCEEDS_CYCLE_POINTS,
+    NO_LOCKED_REWARDS_TO_FUND,
 }
 
 impl DescribableError of Describable<Error> {
@@ -39,6 +40,7 @@ impl DescribableError of Describable<Error> {
             Error::STAKE_NOT_VESTED => "Stake not vested",
             Error::STAKE_ALREADY_CLAIMED => "Stake already claimed",
             Error::LOCK_POINTS_EXCEEDS_CYCLE_POINTS => "Lock points exceeds cycle points",
+            Error::NO_LOCKED_REWARDS_TO_FUND => "No locked rewards to fund",
         }
     }
 }

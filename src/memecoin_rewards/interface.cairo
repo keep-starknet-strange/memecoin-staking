@@ -25,6 +25,9 @@ pub trait IMemeCoinRewards<TContractState> {
 
     /// Get the amount of rewards locked.
     fn get_locked_rewards(self: @TContractState) -> Amount;
+
+    /// Fund the next reward cycle using the locked rewards.
+    fn fund_using_locked_rewards(ref self: TContractState);
 }
 
 pub mod Events {
