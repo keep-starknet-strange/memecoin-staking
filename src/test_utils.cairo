@@ -184,7 +184,7 @@ pub fn approve_and_fund(cfg: TestCfg, fund_amount: Amount) {
 
     let rewards_dispatcher = IMemeCoinRewardsDispatcher { contract_address: cfg.rewards_contract };
     cheat_caller_address_once(contract_address: cfg.rewards_contract, caller_address: cfg.funder);
-    rewards_dispatcher.fund(amount: fund_amount);
+    rewards_dispatcher.fund(amount: fund_amount, use_locked_rewards: false);
 }
 
 pub fn advance_time(time_delta: TimeDelta) {

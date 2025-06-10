@@ -19,6 +19,8 @@ pub(crate) enum Error {
     STAKE_ALREADY_CLAIMED,
     LOCK_POINTS_EXCEEDS_CYCLE_POINTS,
     STAKE_ALREADY_UNSTAKED,
+    NO_LOCKED_REWARDS_TO_FUND,
+    NONZERO_AMOUNT_WITH_LOCKED_REWARDS,
 }
 
 impl DescribableError of Describable<Error> {
@@ -41,6 +43,8 @@ impl DescribableError of Describable<Error> {
             Error::STAKE_ALREADY_CLAIMED => "Stake already claimed",
             Error::LOCK_POINTS_EXCEEDS_CYCLE_POINTS => "Lock points exceeds cycle points",
             Error::STAKE_ALREADY_UNSTAKED => "Stake already unstaked",
+            Error::NO_LOCKED_REWARDS_TO_FUND => "No locked rewards to fund",
+            Error::NONZERO_AMOUNT_WITH_LOCKED_REWARDS => "Can't fund with locked rewards with nonzero amount",
         }
     }
 }
