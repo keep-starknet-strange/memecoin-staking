@@ -135,6 +135,7 @@ pub fn verify_stake_info(
         .sub_delta(other: Time::seconds(count: 1));
     assert!(stake_info.get_reward_cycle() == reward_cycle);
     assert!(stake_info.get_amount() == amount);
+    assert!(stake_info.get_stake_duration() == stake_duration);
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
     assert!(stake_info.is_claimed() == claimed);
