@@ -79,6 +79,14 @@ pub mod Events {
         pub stake_index: Index,
         pub rewards: Amount,
     }
+
+    #[derive(Debug, Drop, starknet::Event, PartialEq)]
+    pub struct StakeUnstaked {
+        #[key]
+        pub staker_address: ContractAddress,
+        pub stake_duration: StakeDuration,
+        pub stake_index: Index,
+    }
 }
 
 /// Different stake durations.
