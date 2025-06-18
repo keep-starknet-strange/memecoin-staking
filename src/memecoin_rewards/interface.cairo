@@ -23,6 +23,7 @@ pub trait IMemeCoinRewards<TContractState> {
     /// Lock the equivalent amount of rewards for a reward cycle
     /// given an amount of points.
     /// Used when a staker unstakes early.
+    /// Can only be called by the staking contract.
     fn lock_rewards(ref self: TContractState, points: u128, reward_cycle: Cycle);
 
     /// Get the amount of rewards locked.
