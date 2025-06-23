@@ -129,6 +129,7 @@ pub fn verify_stake_info(
     amount: Amount,
     stake_duration: StakeDuration,
     claimed: bool,
+    unstaked: bool,
 ) {
     let upper_vesting_time_bound = Time::now().add(delta: stake_duration.to_time_delta().unwrap());
     let lower_vesting_time_bound = upper_vesting_time_bound
@@ -138,6 +139,7 @@ pub fn verify_stake_info(
     assert!(stake_info.get_vesting_time() >= lower_vesting_time_bound);
     assert!(stake_info.get_vesting_time() <= upper_vesting_time_bound);
     assert!(stake_info.is_claimed() == claimed);
+    assert!(stake_info.is_unstaked() == unstaked);
 }
 
 pub fn memecoin_staking_test_setup() -> TestCfg {

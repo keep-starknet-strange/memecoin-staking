@@ -180,7 +180,7 @@ fn test_get_stake_info_same_duration() {
         let stake_info = staking_dispatcher
             .get_stake_info(:staker_address, :stake_duration, :stake_index)
             .unwrap();
-        verify_stake_info(:stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false);
+        verify_stake_info(:stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false, unstaked: false);
     }
 }
 
@@ -219,7 +219,7 @@ fn test_get_stake_info_different_durations() {
         let stake_info = staking_dispatcher
             .get_stake_info(:staker_address, :stake_duration, :stake_index)
             .unwrap();
-        verify_stake_info(:stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false);
+        verify_stake_info(:stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false, unstaked: false);
     }
 }
 
@@ -266,6 +266,126 @@ fn test_get_stake_info_not_exist() {
             .get_stake_info(:staker_address, :stake_duration, stake_index: 1);
         assert!(stake_info.is_none());
     }
+}
+
+#[test]
+fn test_get_stake_info_unvested() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(:staker_address, :stake_duration, :stake_index);
+    assert!(stake_info.is_some());
+    let stake_info = stake_info.unwrap();
+    verify_stake_info(
+        :stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false, unstaked: false,
+    );
+}
+
+#[test]
+fn test_get_stake_info_unclaimed() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(:staker_address, :stake_duration, :stake_index);
+    assert!(stake_info.is_some());
+    let stake_info = stake_info.unwrap();
+    verify_stake_info(
+        :stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false, unstaked: false,
+    );
+}
+
+#[test]
+fn test_get_stake_info_claimed() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(:staker_address, :stake_duration, :stake_index);
+    assert!(stake_info.is_some());
+    let stake_info = stake_info.unwrap();
+    verify_stake_info(
+        :stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: true, unstaked: false,
+    );
+}
+
+#[test]
+fn test_get_stake_info_claimed_unstaked() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+
+    advance_time(time_delta: stake_duration.to_time_delta().unwrap());
+    staking_dispatcher.claim_rewards(:stake_duration, :stake_index);
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(:staker_address, :stake_duration, :stake_index);
+    assert!(stake_info.is_some());
+    let stake_info = stake_info.unwrap();
+    verify_stake_info(
+        :stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: true, unstaked: true,
+    );
+}
+
+#[test]
+fn test_get_stake_info_unclaimed_unstaked() {
+    let cfg = memecoin_staking_test_setup();
+    let staker_address = cfg.staker_address;
+    let staking_dispatcher = IMemeCoinStakingDispatcher { contract_address: cfg.staking_contract };
+
+    let amount = cfg.default_stake_amount;
+    let stake_duration = cfg.default_stake_duration;
+    let stake_index = approve_and_stake(:cfg, :staker_address, :amount, :stake_duration);
+
+    let fund_amount = cfg.default_fund;
+    approve_and_fund(:cfg, :fund_amount);
+    staking_dispatcher.unstake(:stake_duration, :stake_index);
+
+    let stake_info = staking_dispatcher
+        .get_stake_info(:staker_address, :stake_duration, :stake_index);
+    assert!(stake_info.is_some());
+    let stake_info = stake_info.unwrap();
+    verify_stake_info(
+        :stake_info, reward_cycle: 0, :amount, :stake_duration, claimed: false, unstaked: true,
+    );
 }
 
 #[test]
@@ -377,7 +497,7 @@ fn test_close_reward_cycle() {
         let stake_info = staking_dispatcher
             .get_stake_info(:staker_address, :stake_duration, :stake_index)
             .unwrap();
-        verify_stake_info(:stake_info, :reward_cycle, :amount, :stake_duration, claimed: false);
+        verify_stake_info(:stake_info, :reward_cycle, :amount, :stake_duration, claimed: false, unstaked: false);
     }
 }
 
