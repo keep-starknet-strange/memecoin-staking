@@ -7,8 +7,8 @@ edition = "2024_07"
 
 [dependencies]
 starknet = "2.9.2"
-starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", ref = "f120b3b84255e88f8b970f9185cedc093521aba3" }
-starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", ref = "f120b3b84255e88f8b970f9185cedc093521aba3" }
+starkware_utils = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "f120b3b84255e88f8b970f9185cedc093521aba3" }
+starkware_utils_testing = { git = "https://github.com/starkware-libs/starkware-starknet-utils", rev = "f120b3b84255e88f8b970f9185cedc093521aba3" }
 
 [dev-dependencies]
 snforge_std = "0.41.0"
